@@ -146,10 +146,12 @@ function getAppConfig() {
       'DISCOVERY.AI_TERMS': [
         'RAG', 'Copilot', 'Vector Database', 'Fine-tuning', 'Prompt Injection'
       ],
-      'DISCOVERY.PAIN_CATEGORIES': [
+            'DISCOVERY.PAIN_CATEGORIES': [
         'Implementation Failure', 'Cost Overrun', 'Compliance Risk', 'Shadow AI'
       ],
 
+      // Enrichment Defaults
+      'ENRICHMENT.BATCH_SIZE': 5
       // Crawler Defaults
       'CRAWLER.BATCH_SIZE': 50,
       'CRAWLER.MAX_PAGES': 10,
