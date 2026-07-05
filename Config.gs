@@ -151,7 +151,7 @@ function getAppConfig() {
       ],
 
       // Enrichment Defaults
-      'ENRICHMENT.BATCH_SIZE': 5
+      'ENRICHMENT.BATCH_SIZE': 5,
       // Crawler Defaults
       'CRAWLER.BATCH_SIZE': 50,
       'CRAWLER.MAX_PAGES': 10,
