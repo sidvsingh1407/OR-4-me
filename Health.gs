@@ -56,10 +56,9 @@ class Health {
    */
   checkLock() {
     try {
-      const lockManager = new LockManager('SCRIPT');
-      const acquired = lockManager.acquire(1000);
-      if (acquired) {
-        lockManager.release();
+      const lock = DistributedLockManager.acquire(1000, 'SCRIPT');
+      if (lock) {
+        DistributedLockManager.release(lock);
         return { healthy: true, message: 'Lock service is operational.' };
       }
       return { healthy: false, message: 'Failed to acquire test lock.' };

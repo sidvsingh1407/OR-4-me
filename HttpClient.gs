@@ -6,17 +6,9 @@ class HttpClient {
   /**
    * Initializes the HttpClient.
    * @param {Object} [config={}] - Optional configuration for the client.
-   * @param {RetryEngine} [config.retryEngine] - Optional custom RetryEngine.
    */
   constructor(config = {}) {
     this.logger = AppLogger.getLogger('HttpClient');
-    // Default to a standard retry policy if none provided
-    this.retryEngine = config.retryEngine || new RetryEngine({
-      maxRetries: 3,
-      baseDelayMs: 1000,
-      maxDelayMs: 10000,
-      jitterFactor: 0.2
-    });
   }
 
   /**
@@ -101,12 +93,10 @@ class HttpClient {
     };
 
     const isRetryable = (error) => {
-      // If it's a specific HTTP error we mapped above, retry it.
       if (error instanceof NetworkError && error.details && error.details.statusCode) {
          const code = error.details.statusCode;
          return code === 429 || code >= 500;
       }
-      // Also retry generic network timeouts from UrlFetchApp
       const msg = error.message.toLowerCase();
       if (msg.includes('timeout') || msg.includes('dns') || msg.includes('connection error')) {
          return true;
@@ -114,7 +104,13 @@ class HttpClient {
       return false;
     };
 
-    return this.retryEngine.execute(operation, isRetryable);
+    return RetryEngine.execute(operation, {
+      maxRetries: 3,
+      baseDelayMs: 1000,
+      maxDelayMs: 10000,
+      operationName: `HTTP ${params.method.toUpperCase()} ${url}`,
+      shouldRetryPredicate: isRetryable
+    });
   }
 
   /**
