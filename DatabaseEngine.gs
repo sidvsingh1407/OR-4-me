@@ -97,11 +97,6 @@ const SCHEMA = {
     lastAttempt: { type: 'string' },
     processingOwner: { type: 'string' }
   },
-  KnowledgeGraph: {
-    nodeType: { type: 'string', required: true },
-    entityId: { type: 'string', required: true },
-    properties: { type: 'string', default: '{}' }
-  },
   Duplicates: {
     originalId: { type: 'string', required: true },
     duplicateId: { type: 'string', required: true },
@@ -586,6 +581,15 @@ function getTransactionManager() {
 
 class Database {
   constructor() {
+    // Attempt to inject Graph schemas into the global SCHEMA object
+    if (typeof getGraphSchemaRegistry === 'function') {
+      try {
+        getGraphSchemaRegistry().injectIntoDatabaseSchema();
+      } catch (e) {
+        console.warn('DatabaseEngine: Could not inject GraphSchemaRegistry schemas.', e);
+      }
+    }
+
     this.ss = SpreadsheetApp.getActiveSpreadsheet();
     if (!this.ss) {
       throw new Error("DatabaseEngine: Active spreadsheet not found.");
