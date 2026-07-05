@@ -152,6 +152,53 @@ function getAppConfig() {
 
       // Enrichment Defaults
       'ENRICHMENT.BATCH_SIZE': 5
+      // Crawler Defaults
+      'CRAWLER.BATCH_SIZE': 50,
+      'CRAWLER.MAX_PAGES': 10,
+      'CRAWLER.RETRY_COUNT': 3,
+      'CRAWLER.TIMEOUT_MS': 15000,
+      'CRAWLER.ENABLED_PLUGINS': [
+        'RSSCrawler', 'RedditCrawler', 'GitHubCrawler', 'HackerNewsCrawler',
+        'GreenhouseCrawler', 'LeverCrawler', 'AshbyCrawler', 'WorkableCrawler'
+      ],
+      'CRAWLER.USER_AGENT': 'TarkaX/1.0 (Enterprise AI Intelligence Agent)',
+      'CRAWLER.LANGUAGE_FILTER': 'en',
+
+      // Plugin Specific Limits
+      'CRAWLER.REDDIT_RATE_LIMIT_MS': 2000,
+      'CRAWLER.GITHUB_RATE_LIMIT_MS': 1000,
+
+      // Default Feeds/Targets (Discovery expands this)
+      'CRAWLER.DEFAULT_RSS_FEEDS': [
+        'https://techcrunch.com/category/artificial-intelligence/feed/'
+      ],
+      'CRAWLER.GENERIC_RSS_FEEDS': [
+        'https://news.ycombinator.com/rss'
+      ],
+      'CRAWLER.ENGINEERING_RSS_FEEDS': [
+        'https://engineering.fb.com/feed/'
+      ],
+      'CRAWLER.AI_RSS_FEEDS': [
+        'https://openai.com/blog/rss/'
+      ],
+      'CRAWLER.DEFAULT_SUBREDDITS': [
+        'MachineLearning', 'ArtificialInteligence', 'DataScience', 'mlops'
+      ],
+      'CRAWLER.GITHUB_QUERIES': [
+        'AI integration failed', 'LLM timeout', 'vector database cost'
+      ],
+      'CRAWLER.GREENHOUSE_COMPANIES': [
+        'openai', 'anthropic', 'cohere'
+      ],
+      'CRAWLER.LEVER_COMPANIES': [
+        'scaleai'
+      ],
+      'CRAWLER.ASHBY_COMPANIES': [
+        'pinecone'
+      ],
+      'CRAWLER.WORKABLE_COMPANIES': [
+        'jasper'
+      ]
     });
   }
   return getAppConfig.instance;
