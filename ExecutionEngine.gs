@@ -94,12 +94,58 @@ class ExecutionEngine {
       // Execute via dispatcher wrapped in RetryEngine
       const payload = typeof task.payload === 'string' ? JSON.parse(task.payload) : task.payload;
 
+      let result = null;
       RetryEngine.execute(() => {
-         this.dispatcher.executeTask(task.taskType, payload);
+         result = this.dispatcher.executeTask(task.taskType, payload);
       }, { operationName: `Task Execution: ${task.taskType}` });
 
-      this.queueManager.markSuccess(task._id);
-      getExecutionLogger().info('ExecutionEngine', 'ProcessTask', `Task ${task._id} completed successfully.`);
+      // Handle structured results from modular engines (e.g., DiscoveryEngine)
+      if (result && typeof result === 'object' && result.status) {
+        if (result.status === 'CONTINUE') {
+           getExecutionLogger().info('ExecutionEngine', 'ProcessTask', `Task ${task._id} returning CONTINUE for next state: ${result.nextState}`);
+
+           // Allow the specific engine to handle its own checkpoint if it exports a global getter, otherwise fallback
+           if (result.payload) {
+              const engineGetterName = 'get' + task.taskType.charAt(0).toUpperCase() + task.taskType.slice(1).toLowerCase() + 'Engine';
+              try {
+                if (typeof globalThis[engineGetterName] === 'function') {
+                   const engineInstance = globalThis[engineGetterName]();
+                   if (typeof engineInstance.checkpoint === 'function') {
+                      engineInstance.checkpoint(result.payload);
+                   }
+                }
+              } catch (ignored) {}
+
+              // Fallback central checkpoint just in case
+              this.checkpointEngine.saveCheckpoint({
+                 currentTask: result.nextState,
+                 currentModule: task.taskType,
+                 apiState: result.payload
+              });
+           }
+
+           // Re-queue the continuation
+           this.queueManager.enqueue(task.taskType, result.payload || {}, task.priority || 1);
+
+           // Mark the original slice as success since we queued the continuation
+           this.queueManager.markSuccess(task._id);
+
+           // Check timeout immediately after a state transition since some states are heavy
+           this.timeoutManager.checkAndHaltIfNeeded(15000);
+
+        } else if (result.status === 'FAILED') {
+           getExecutionLogger().error('ExecutionEngine', 'ProcessTask', `Task ${task._id} returned FAILED`, result.reason);
+           this.queueManager.markFailed(task, new Error(result.reason || 'Task returned FAILED status'));
+        } else {
+           // COMPLETED or unknown success status
+           this.queueManager.markSuccess(task._id);
+           getExecutionLogger().info('ExecutionEngine', 'ProcessTask', `Task ${task._id} completed successfully with status: ${result.status}`);
+        }
+      } else {
+        // Legacy/unstructured task response
+        this.queueManager.markSuccess(task._id);
+        getExecutionLogger().info('ExecutionEngine', 'ProcessTask', `Task ${task._id} completed successfully.`);
+      }
 
     } catch (error) {
       getExecutionLogger().error('ExecutionEngine', 'ProcessTask', `Error processing task ${task._id}`, error);
