@@ -116,6 +116,40 @@ class Config {
 function getAppConfig() {
   if (!getAppConfig.instance) {
     getAppConfig.instance = new Config();
+
+    // Load default TarkaX phase 4 configuration
+    getAppConfig.instance.load({
+      // AI Defaults
+      'AI.PROVIDER': 'gemini',
+      'AI.MODEL': 'gemini-2.5-flash',
+      'AI.API_KEY': '', // To be filled by user securely
+      'AI.BASE_URL': 'https://generativelanguage.googleapis.com/v1beta',
+      'AI.TEMPERATURE': 0.2,
+      'AI.MAX_TOKENS': 4096,
+      'AI.TIMEOUT_MS': 30000,
+
+      // Discovery Defaults
+      'DISCOVERY.CATEGORIES': [
+        'Enterprise AI', 'Digital Transformation', 'Automation', 'RPA',
+        'LLMs', 'RAG', 'Agentic AI', 'Prompt Engineering'
+      ],
+      'DISCOVERY.INDUSTRIES': [
+        'Healthcare', 'Manufacturing', 'Finance', 'Insurance', 'Retail'
+      ],
+      'DISCOVERY.COUNTRIES': ['USA', 'UK', 'Canada', 'Australia'],
+      'DISCOVERY.LANGUAGES': ['English'],
+      'DISCOVERY.BOOLEAN_OPERATORS': ['AND', 'OR', 'NOT', 'site:', 'intitle:', 'inurl:'],
+      'DISCOVERY.EXECUTIVE_TITLES': [
+        'Director of AI', 'VP of Engineering', 'CIO', 'CDO',
+        'Head of AI', 'Chief AI Officer', 'VP Data Science'
+      ],
+      'DISCOVERY.AI_TERMS': [
+        'RAG', 'Copilot', 'Vector Database', 'Fine-tuning', 'Prompt Injection'
+      ],
+      'DISCOVERY.PAIN_CATEGORIES': [
+        'Implementation Failure', 'Cost Overrun', 'Compliance Risk', 'Shadow AI'
+      ]
+    });
   }
   return getAppConfig.instance;
 }

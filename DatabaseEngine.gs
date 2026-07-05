@@ -42,6 +42,59 @@ const SCHEMA = {
     duplicateId: { type: 'string', required: true },
     confidence: { type: 'number', default: 1.0 }
   },
+  DiscoveryHistory: {
+    searchQuery: { type: 'string', required: true },
+    generationSource: { type: 'string' },
+    category: { type: 'string' },
+    confidence: { type: 'number', default: 0 },
+    timesExecuted: { type: 'number', default: 0 },
+    resultsReturned: { type: 'number', default: 0 },
+    successRate: { type: 'number', default: 0 },
+    avgLeadScore: { type: 'number', default: 0 },
+    avgPainScore: { type: 'number', default: 0 },
+    status: { type: 'string', default: 'ACTIVE' }
+  },
+  SearchQueue: {
+    searchQuery: { type: 'string', required: true },
+    category: { type: 'string' },
+    industry: { type: 'string' },
+    country: { type: 'string' },
+    language: { type: 'string' },
+    priority: { type: 'number', default: 1 },
+    confidence: { type: 'number', default: 0 },
+    source: { type: 'string' },
+    generatedTimestamp: { type: 'string' },
+    expirationTimestamp: { type: 'string' },
+    executionStatus: { type: 'string', default: 'PENDING' },
+    retryCount: { type: 'number', default: 0 },
+    lastExecution: { type: 'string' }
+  },
+  DiscoveryMetrics: {
+    metricName: { type: 'string', required: true },
+    metricValue: { type: 'string', required: true },
+    timestamp: { type: 'string', required: true }
+  },
+  DiscoveryBlacklist: {
+    term: { type: 'string', required: true },
+    reason: { type: 'string' },
+    addedAt: { type: 'string', required: true }
+  },
+  DiscoveryCache: {
+    cacheKey: { type: 'string', required: true },
+    payload: { type: 'string', required: true },
+    expiresAt: { type: 'string', required: true }
+  },
+  DiscoveryKeywords: {
+    keyword: { type: 'string', required: true },
+    category: { type: 'string' },
+    confidence: { type: 'number', default: 1.0 },
+    source: { type: 'string' }
+  },
+  DiscoveryCategories: {
+    name: { type: 'string', required: true },
+    description: { type: 'string' },
+    status: { type: 'string', default: 'ACTIVE' }
+  },
   SystemLogs: {
     timestamp: { type: 'string', required: true },
     level: { type: 'string', required: true },
