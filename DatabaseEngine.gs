@@ -189,6 +189,15 @@ const SCHEMA = {
     value: { type: 'string', required: true },
     category: { type: 'string', default: 'General' }
   },
+  TestReports: {
+    runId: { type: 'string', required: true },
+    timestamp: { type: 'string', required: true },
+    suiteName: { type: 'string', required: true },
+    testName: { type: 'string', required: true },
+    status: { type: 'string', required: true },
+    duration: { type: 'number', required: true },
+    errorMsg: { type: 'string' }
+  },
   AuditTrail: {
     operation: { type: 'string', required: true },
     sheetName: { type: 'string', required: true },
