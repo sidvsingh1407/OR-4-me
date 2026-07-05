@@ -79,6 +79,40 @@ class GraphSchemaRegistry {
       details: { type: 'string' },
       timestamp: { type: 'string' }
     };
+
+    SCHEMA['AutomationMetrics_Status'] = {
+      id: { type: 'string', required: true, unique: true }, // Should be fixed ID like "CURRENT"
+      healthScore: { type: 'number', default: 100 },
+      queueSize: { type: 'number', default: 0 },
+      currentStage: { type: 'string' },
+      runningWorker: { type: 'string' },
+      activeTriggerCount: { type: 'number', default: 0 },
+      lastSuccessfulExecution: { type: 'string' },
+      lastFailedExecution: { type: 'string' },
+      pendingTasks: { type: 'number', default: 0 },
+      failedTasks: { type: 'number', default: 0 },
+      retryCount: { type: 'number', default: 0 },
+      apiErrorCount: { type: 'number', default: 0 },
+      lockContention: { type: 'number', default: 0 },
+      runtimeMs: { type: 'number', default: 0 },
+      remainingQuotaEstimate: { type: 'number', default: 0 },
+      updatedAt: { type: 'string' }
+    };
+
+    SCHEMA['AutomationMetrics_History'] = {
+      id: { type: 'string', required: true, unique: true },
+      timestamp: { type: 'string', required: true },
+      healthScore: { type: 'number' },
+      queueSize: { type: 'number' },
+      runtimeMs: { type: 'number' },
+      tasksCompleted: { type: 'number' },
+      tasksFailed: { type: 'number' },
+      apiCalls: { type: 'number' },
+      retryCount: { type: 'number' },
+      memoryEstimate: { type: 'number' },
+      triggerCount: { type: 'number' },
+      stageCompleted: { type: 'string' }
+    };
   }
 
   _initializeDefaults() {
