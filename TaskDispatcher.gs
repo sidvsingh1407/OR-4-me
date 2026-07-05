@@ -84,6 +84,11 @@ class TaskDispatcher {
 function getTaskDispatcher() {
   if (!getTaskDispatcher.instance) {
     getTaskDispatcher.instance = new TaskDispatcher();
+
+    // Auto-register known engines
+    if (typeof registerEnrichmentEngine === 'function') {
+       registerEnrichmentEngine();
+    }
   }
   return getTaskDispatcher.instance;
 }
