@@ -7,6 +7,10 @@
  * - Long-running tasks
  * - Retry storms (excessive tasks in RETRY state)
  * - Lock contention (excessive wait times for LockService)
+ * - Trigger integrity
+ * - Script Properties integrity
+ * - Sheet integrity
+ * - Runtime statistics
  */
 
 class HealthMonitor {
@@ -33,6 +37,12 @@ class HealthMonitor {
       this._checkCheckpointHealth(report);
       this._checkRetryStorms(report);
       this._checkLockHealth(report);
+      this._checkTriggerHealth(report);
+      this._checkCacheAndProperties(report);
+      this._checkSheetIntegrity(report);
+
+      // Save report to both historical and status sheets
+      this._saveMetrics(report);
 
       if (report.issues.length > 0) {
         this.logger.warn('HealthMonitor', 'generateReport', `Health check completed with ${report.issues.length} issues. Score: ${report.score}`, report);
@@ -56,7 +66,11 @@ class HealthMonitor {
 
     // Find all tasks currently marked as RUNNING
     const runningTasks = db.findMany('Queue', { status: 'RUNNING' });
+    const pendingTasks = db.findMany('Queue', { status: 'PENDING' });
+
     report.metrics.runningTasks = runningTasks.length;
+    report.metrics.pendingTasks = pendingTasks.length;
+    report.metrics.queueSize = runningTasks.length + pendingTasks.length;
 
     if (runningTasks.length > 0) {
       const now = new Date().getTime();
@@ -67,7 +81,6 @@ class HealthMonitor {
         const durationMin = (now - updatedAt) / (1000 * 60);
 
         // If a task has been RUNNING for more than 15 minutes, it's likely stuck
-        // (since GAS max execution is 6 mins, + buffer)
         if (durationMin > 15) {
           stuckCount++;
           report.issues.push(`Stuck Task detected: ${task._id} (RUNNING for ${durationMin.toFixed(1)} mins)`);
@@ -109,9 +122,11 @@ class HealthMonitor {
     const db = getDatabase();
     const retryTasks = db.findMany('Queue', { status: 'RETRY' });
     const failedTasks = db.findMany('Queue', { status: 'FAILED' }); // Count recently failed too
+    const successTasks = db.findMany('Queue', { status: 'COMPLETED' });
 
     report.metrics.tasksInRetry = retryTasks.length;
     report.metrics.tasksFailed = failedTasks.length;
+    report.metrics.tasksCompleted = successTasks.length;
 
     if (retryTasks.length > 50) {
       report.issues.push(`Retry Storm Warning: ${retryTasks.length} tasks currently queued for RETRY.`);
@@ -140,6 +155,114 @@ class HealthMonitor {
       }
     }
     report.metrics.lockTestDurationMs = duration;
+  }
+
+  /**
+   * Validates trigger integrity.
+   */
+  _checkTriggerHealth(report) {
+    const triggers = ScriptApp.getProjectTriggers();
+    report.metrics.triggerCount = triggers.length;
+
+    if (triggers.length === 0) {
+       report.issues.push('No triggers found. Automation is completely offline.');
+       report.score -= 50;
+    }
+  }
+
+  /**
+   * Validates cache and properties usage.
+   */
+  _checkCacheAndProperties(report) {
+    const props = PropertiesService.getScriptProperties();
+    const keys = props.getKeys();
+
+    report.metrics.propertiesCount = keys.length;
+
+    // Very basic check, if keys are approaching 500 (soft limit estimation)
+    if (keys.length > 500) {
+       report.issues.push(`High Properties Usage: ${keys.length} keys in use.`);
+       report.score -= 10;
+    }
+
+    // Cache test
+    const cache = CacheService.getScriptCache();
+    cache.put('HealthTest', 'OK', 60);
+    const result = cache.get('HealthTest');
+    if (result !== 'OK') {
+       report.issues.push('CacheService is unavailable or malfunctioning.');
+       report.score -= 15;
+    }
+  }
+
+  /**
+   * Validates core database sheets.
+   */
+  _checkSheetIntegrity(report) {
+    const db = getDatabase();
+    const expectedSheets = ['Queue', 'Checkpoints', 'SystemLogs'];
+
+    for (const sheet of expectedSheets) {
+       if (!db._getSheet(sheet)) {
+          report.issues.push(`Missing core system sheet: ${sheet}`);
+          report.score -= 30;
+       }
+    }
+  }
+
+  /**
+   * Saves metrics to the AutomationMetrics tables.
+   */
+  _saveMetrics(report) {
+    const db = getDatabase();
+    const stateManager = getExecutionStateManager();
+    const currentState = stateManager.getState();
+
+    // Ensure metrics are never negative
+    const finalScore = Math.max(0, report.score);
+
+    const statusRecord = {
+      id: 'CURRENT',
+      healthScore: finalScore,
+      queueSize: report.metrics.queueSize || 0,
+      currentStage: currentState.currentStage || 'IDLE',
+      runningWorker: currentState.currentWorker || 'NONE',
+      activeTriggerCount: report.metrics.triggerCount || 0,
+      lastSuccessfulExecution: currentState.state === 'SUCCESS' ? new Date().toISOString() : null,
+      lastFailedExecution: currentState.state === 'FAILED' ? new Date().toISOString() : null,
+      pendingTasks: report.metrics.pendingTasks || 0,
+      failedTasks: report.metrics.tasksFailed || 0,
+      retryCount: currentState.retryCount || 0,
+      apiErrorCount: 0, // Would be pulled from ApiLogs if they exist
+      lockContention: report.metrics.lockTestDurationMs || 0,
+      runtimeMs: 0, // Can calculate based on execution start time
+      remainingQuotaEstimate: 0,
+      updatedAt: report.timestamp
+    };
+
+    // 1. Update Status Sheet (UPSERT)
+    const existingStatus = db.findById('AutomationMetrics_Status', 'CURRENT');
+    if (existingStatus) {
+       db.update('AutomationMetrics_Status', 'CURRENT', statusRecord);
+    } else {
+       db.insert('AutomationMetrics_Status', statusRecord);
+    }
+
+    // 2. Insert into History
+    db.insert('AutomationMetrics_History', {
+       id: Utilities.getUuid(),
+       timestamp: report.timestamp,
+       healthScore: finalScore,
+       queueSize: report.metrics.queueSize || 0,
+       runtimeMs: 0,
+       tasksCompleted: report.metrics.tasksCompleted || 0,
+       tasksFailed: report.metrics.tasksFailed || 0,
+       apiCalls: 0,
+       retryCount: currentState.retryCount || 0,
+       memoryEstimate: 0,
+       triggerCount: report.metrics.triggerCount || 0,
+       stageCompleted: currentState.currentStage || 'NONE'
+    });
   }
 }
 

@@ -36,6 +36,16 @@ class ExecutionEngine {
         // 1. Check Timeout before starting a new batch
         this.timeoutManager.checkAndHaltIfNeeded(15000); // Need at least 15s to safely process a task
 
+        // Watchdog enforcement
+        try {
+           if (typeof getExecutionWatchdog === 'function') {
+              getExecutionWatchdog().monitorAndEnforce();
+           }
+        } catch (e) {
+           // If watchdog throws, it means it's forcing termination
+           throw e;
+        }
+
         // 2. Fetch Tasks
         const tasks = this.queueManager.getNextBatch(5); // Process in small batches
         if (tasks.length === 0) {
@@ -166,9 +176,14 @@ class ExecutionEngine {
   }
 }
 
-// Global Entry point for daily scheduled runs
+// Global Entry point for daily scheduled runs (Legacy, now mapped to AutomationEngine)
 function TarkaX_System_Start() {
-  // Register active engine tasks before start
+  if (typeof getAutomationEngine === 'function') {
+     getAutomationEngine().runDailyPipeline();
+     return;
+  }
+
+  // Register active engine tasks before start (Legacy fallback)
   const dispatcher = getTaskDispatcher();
 
   if (!dispatcher.taskExists('DISCOVER')) {

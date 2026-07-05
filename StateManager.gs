@@ -38,7 +38,14 @@ class ExecutionStateManager {
       currentModule: null,
       resumeToken: null,
       lastCheckpointTime: null,
-      retryCount: 0
+      retryCount: 0,
+
+      // Pipeline Scheduler specific state
+      currentStage: null,
+      completedStages: [],
+      failedStages: [],
+      lastHeartbeat: new Date().toISOString(),
+      currentWorker: null
     };
     this._saveState(initialState);
     return initialState;
