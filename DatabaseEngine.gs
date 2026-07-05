@@ -61,7 +61,21 @@ const SCHEMA = {
     overallQualityScore: { type: 'number', default: 0 },
     originalSource: { type: 'string' },
     originalUrl: { type: 'string' },
-    crawlTimestamp: { type: 'string' }
+    crawlTimestamp: { type: 'string' },
+    // Phase 8 - Scoring Engine output columns
+    buyingIntentScore: { type: 'number', default: 0 },
+    painScore: { type: 'number', default: 0 },
+    growthScore: { type: 'number', default: 0 },
+    technologyScore: { type: 'number', default: 0 },
+    hiringScore: { type: 'number', default: 0 },
+    priorityTier: { type: 'string' },
+    recommendedAction: { type: 'string' },
+    reasoning: { type: 'string' },
+    contributingSignals: { type: 'string' },
+    detectedPains: { type: 'string' },
+    signalBreakdown: { type: 'string' },
+    scoreBreakdown: { type: 'string' },
+    calculatedAt: { type: 'string' }
   },
   RawLeads: {
     rawLeadId: { type: 'string', required: true },

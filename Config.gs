@@ -198,7 +198,120 @@ function getAppConfig() {
       ],
       'CRAWLER.WORKABLE_COMPANIES': [
         'jasper'
-      ]
+      ],
+
+      // Scoring Engine Defaults
+      'SCORING.MAX_SCORE': 100,
+
+      // Component Weights (must sum to 1.0)
+      'SCORING.WEIGHTS.PAIN': 0.35,
+      'SCORING.WEIGHTS.GROWTH': 0.15,
+      'SCORING.WEIGHTS.HIRING': 0.20,
+      'SCORING.WEIGHTS.TECHNOLOGY': 0.15,
+      'SCORING.WEIGHTS.FUNDING': 0.10,
+      'SCORING.WEIGHTS.EXECUTIVE': 0.05,
+
+      // Priority Tiers Configuration
+      'SCORING.TIERS.TIER_1.MIN_SCORE': 85,
+      'SCORING.TIERS.TIER_1.LABEL': 'Tier 1',
+      'SCORING.TIERS.TIER_1.ACTION': 'Immediate Outreach',
+
+      'SCORING.TIERS.TIER_2.MIN_SCORE': 70,
+      'SCORING.TIERS.TIER_2.LABEL': 'Tier 2',
+      'SCORING.TIERS.TIER_2.ACTION': 'High Priority',
+
+      'SCORING.TIERS.TIER_3.MIN_SCORE': 50,
+      'SCORING.TIERS.TIER_3.LABEL': 'Tier 3',
+      'SCORING.TIERS.TIER_3.ACTION': 'Warm Lead',
+
+      'SCORING.TIERS.TIER_4.MIN_SCORE': 30,
+      'SCORING.TIERS.TIER_4.LABEL': 'Tier 4',
+      'SCORING.TIERS.TIER_4.ACTION': 'Monitor',
+
+      'SCORING.TIERS.TIER_5.MIN_SCORE': 0,
+      'SCORING.TIERS.TIER_5.LABEL': 'Tier 5',
+      'SCORING.TIERS.TIER_5.ACTION': 'Ignore',
+
+      // Decay factors based on freshness (age in days)
+      'SCORING.DECAY.MAX_DAYS': 90,
+      'SCORING.DECAY.RATE': 0.05, // 5% decay per week
+      'SCORING.DECAY.FLOOR': 0.5,
+
+      // Growth specific thresholds
+      'SCORING.GROWTH.ENTERPRISE_THRESHOLD': 1000,
+      'SCORING.GROWTH.ENTERPRISE_SCORE': 10,
+
+      // Keyword dictionaries with their base scores
+      'SCORING.SIGNALS.PAIN': [
+        { term: 'Shadow AI', score: 20 },
+        { term: 'AI governance', score: 18 },
+        { term: 'prompt inconsistency', score: 15 },
+        { term: 'hallucination complaints', score: 15 },
+        { term: 'automation failures', score: 15 },
+        { term: 'model drift', score: 12 },
+        { term: 'ROI concerns', score: 20 },
+        { term: 'manual processes', score: 10 }
+      ],
+
+      'SCORING.SIGNALS.GROWTH': [
+        { term: 'employee growth', score: 10 },
+        { term: 'hiring velocity', score: 15 },
+        { term: 'department expansion', score: 10 },
+        { term: 'AI team growth', score: 20 },
+        { term: 'engineering expansion', score: 15 }
+      ],
+
+      'SCORING.SIGNALS.HIRING': [
+        { term: 'AI Engineer', score: 15 },
+        { term: 'ML Engineer', score: 15 },
+        { term: 'Prompt Engineer', score: 20 },
+        { term: 'AI Product Manager', score: 18 },
+        { term: 'AI Governance Lead', score: 25 },
+        { term: 'AI Operations', score: 20 },
+        { term: 'AI Security', score: 20 },
+        { term: 'LLM Engineer', score: 18 },
+        { term: 'MLOps Engineer', score: 15 },
+        { term: 'AI Consultant', score: 10 }
+      ],
+
+      'SCORING.SIGNALS.TECHNOLOGY': [
+        { term: 'OpenAI', score: 10 },
+        { term: 'Gemini', score: 10 },
+        { term: 'Claude', score: 10 },
+        { term: 'Microsoft Copilot', score: 15 },
+        { term: 'GitHub Copilot', score: 12 },
+        { term: 'LangChain', score: 15 },
+        { term: 'LlamaIndex', score: 15 },
+        { term: 'Vector Database', score: 18 },
+        { term: 'RAG', score: 20 },
+        { term: 'MCP', score: 25 },
+        { term: 'AI agents', score: 20 }
+      ],
+
+      'SCORING.SIGNALS.FUNDING': [
+        { term: 'recent funding', score: 15 },
+        { term: 'Series A', score: 10 },
+        { term: 'Series B', score: 12 },
+        { term: 'Series C', score: 15 },
+        { term: 'IPO preparation', score: 20 },
+        { term: 'acquisitions', score: 15 }
+      ],
+
+      'SCORING.SIGNALS.EXECUTIVE': [
+        { term: 'AI strategy', score: 20 },
+        { term: 'transformation roadmap', score: 15 },
+        { term: 'Chief AI Officer', score: 25 },
+        { term: 'VP AI', score: 20 }
+      ],
+
+      // Source Confidence multipliers
+      'SCORING.CONFIDENCE.LINKEDIN': 1.0,
+      'SCORING.CONFIDENCE.GITHUB': 0.9,
+      'SCORING.CONFIDENCE.REDDIT': 0.7,
+      'SCORING.CONFIDENCE.HACKERNEWS': 0.8,
+      'SCORING.CONFIDENCE.NEWS': 0.85,
+      'SCORING.CONFIDENCE.COMPANY_BLOG': 0.95,
+      'SCORING.CONFIDENCE.UNKNOWN': 0.5
     });
   }
   return getAppConfig.instance;
