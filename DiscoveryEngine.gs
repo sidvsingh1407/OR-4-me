@@ -242,10 +242,17 @@ class DiscoveryEngine {
           }
 
           // Add to main execution queue for Phase 5 (Crawlers) to process.
+          // By default, map generic discoveries to generic Crawler Engine dispatch task
           const qManager = getQueueManager();
           queueItems.forEach(item => {
-             qManager.enqueue('DISCOVERY_SEARCH_QUEUE', item, item.priority);
+             // We drop it into the main queue for the CRAWL phase to pick up.
+             // Usually CRAWL picks it up via payload or config state.
+             qManager.enqueue('CRAWL', { searchItem: item }, item.priority);
           });
+
+          // Phase 5 Discovery Extension:
+          // Inject newly discovered domains or sources directly to CRAWLER Config if high confidence
+          this._expandCrawlerConfiguration(currentState.searches);
 
           currentState.progress = 100;
           return { status: 'COMPLETED', payload: currentState };
@@ -257,6 +264,28 @@ class DiscoveryEngine {
       this.logger.error('DiscoveryEngine', 'Execute', `Failed at state ${currentState.state}`, e);
       return { status: 'FAILED', retryable: true, reason: e.message, payload: currentState };
     }
+  }
+
+  /**
+   * Extends the CRAWLER targets dynamically if the search engine discovered new specific domains/subreddits
+   */
+  _expandCrawlerConfiguration(searches) {
+    const config = getAppConfig();
+    const currentSubs = config.get('CRAWLER.DEFAULT_SUBREDDITS', []);
+
+    // Naive mock extraction: if a boolean search contains a site:reddit.com/r/xyz, extract xyz
+    // In reality this would be its own AI extraction phase for source URLs
+    searches.forEach(s => {
+       if (s.query && s.query.includes('site:reddit.com/r/')) {
+          const match = s.query.match(/site:reddit\.com\/r\/([a-zA-Z0-9_]+)/);
+          if (match && match[1] && !currentSubs.includes(match[1])) {
+             currentSubs.push(match[1]);
+          }
+       }
+    });
+
+    config.set('CRAWLER.DEFAULT_SUBREDDITS', currentSubs);
+    // Since config is memory, and sheets are persistence, we would normally sync config back to sheets here.
   }
 
   /**

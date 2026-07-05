@@ -168,6 +168,21 @@ class ExecutionEngine {
 
 // Global Entry point for daily scheduled runs
 function TarkaX_System_Start() {
+  // Register active engine tasks before start
+  const dispatcher = getTaskDispatcher();
+
+  if (!dispatcher.taskExists('DISCOVER')) {
+      dispatcher.registerTask('DISCOVER', (payload) => {
+         return getDiscoveryEngine().execute(payload);
+      });
+  }
+
+  if (!dispatcher.taskExists('CRAWL')) {
+      dispatcher.registerTask('CRAWL', (payload) => {
+         return getCrawlerEngine().execute(payload);
+      });
+  }
+
   const engine = getExecutionEngine();
   engine.start();
 }
