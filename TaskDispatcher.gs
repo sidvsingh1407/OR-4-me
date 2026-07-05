@@ -89,6 +89,11 @@ function getTaskDispatcher() {
     if (typeof registerEnrichmentEngine === 'function') {
        registerEnrichmentEngine();
     }
+
+    // Auto-register Graph Tasks
+    if (typeof registerGraphTasks === 'function') {
+       registerGraphTasks();
+    }
   }
   return getTaskDispatcher.instance;
 }
