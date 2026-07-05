@@ -150,97 +150,6 @@ class DBUtils {
 }
 
 // ============================================================================
-// CONCURRENCY & RELIABILITY
-// ============================================================================
-
-class LockManager {
-  constructor() {
-    this.lockTime = 30000;
-  }
-
-  acquire(description = 'database_operation') {
-    const lock = LockService.getScriptLock();
-    try {
-      lock.waitLock(this.lockTime);
-      return lock;
-    } catch (e) {
-      throw new Error(`LockManager: Failed to acquire lock for ${description} within ${this.lockTime}ms. Error: ${e.message}`);
-    }
-  }
-
-  release(lock) {
-    if (!lock) return;
-    try {
-      SpreadsheetApp.flush();
-    } catch (e) {
-      // Ignore flush errors
-    } finally {
-      try {
-        lock.releaseLock();
-      } catch (e) {
-        // Ignore release errors
-      }
-    }
-  }
-
-  executeWithLock(callback, description) {
-    const lock = this.acquire(description);
-    try {
-      return callback();
-    } finally {
-      this.release(lock);
-    }
-  }
-}
-
-let _lockManagerInstance = null;
-function getLockManager() {
-  if (!_lockManagerInstance) {
-    _lockManagerInstance = new LockManager();
-  }
-  return _lockManagerInstance;
-}
-
-class RetryManager {
-  static execute(callback, options = {}) {
-    const maxRetries = options.maxRetries || 5;
-    const initialBackoff = options.initialBackoff || 1000;
-    const operationName = options.operationName || 'Unknown Operation';
-
-    let attempt = 0;
-    let lastError = null;
-
-    while (attempt < maxRetries) {
-      try {
-        return callback();
-      } catch (e) {
-        lastError = e;
-        attempt++;
-
-        // Log individual retry failures if logger is available
-        try {
-          getLogger().warn('RetryManager', operationName, `Attempt ${attempt} failed. Retrying...`, e);
-        } catch(logErr) { /* ignore logger failure in retry loop */ }
-
-        if (attempt >= maxRetries) break;
-
-        const jitter = Math.floor(Math.random() * 500);
-        const backoff = (initialBackoff * Math.pow(2, attempt - 1)) + jitter;
-        Utilities.sleep(backoff);
-      }
-    }
-
-    const finalError = new Error(`RetryManager: ${operationName} failed after ${maxRetries} attempts. Last error: ${lastError.message}`);
-    try {
-      getLogger().error('RetryManager', operationName, `Operation completely failed`, finalError);
-    } catch(logErr) { /* ignore logger failure */ }
-
-    throw finalError;
-  }
-}
-
-
-// ============================================================================
 // SYSTEM LOGGER (FAIL-SAFE)
 // ============================================================================
 
@@ -293,13 +202,11 @@ class FailSafeLogger {
       details ? DBUtils.safeStringify(details) : ''
     ];
 
-    RetryManager.execute(() => {
-      const lock = getLockManager().acquire('log_write');
-      try {
+    RetryEngine.execute(() => {
+      DistributedLockManager.executeWithLock(() => {
         sheet.appendRow(row);
-      } finally {
-        getLockManager().release(lock);
-      }
+        SpreadsheetApp.flush();
+      }, 30000, 'SCRIPT');
     }, { operationName: 'SystemLogs Write', maxRetries: 3 });
   }
 
@@ -620,8 +527,7 @@ class Database {
     const schemaFields = Object.keys(SCHEMA[sheetName] || {});
     const allRequiredFields = [...SYSTEM_COLUMNS, ...schemaFields];
 
-    const lock = getLockManager().acquire('schema_update');
-    try {
+    DistributedLockManager.executeWithLock(() => {
       let headers = this._getHeaders(sheetName);
       if (headers.length === 0) {
         // Brand new sheet
@@ -638,11 +544,10 @@ class Database {
           getLogger().info('DatabaseEngine', '_ensureSchemaColumns', `Added missing columns to ${sheetName}: ${missingFields.join(', ')}`);
         }
       }
+      SpreadsheetApp.flush();
       // Update cache
       this._updateHeaderCache(sheetName, headers);
-    } finally {
-      getLockManager().release(lock);
-    }
+    }, 30000, 'SCRIPT');
   }
 
   _getHeaders(sheetName) {
@@ -735,18 +640,16 @@ class Database {
     // Automatically chunk large batches (e.g. 1000 rows max per write)
     const chunkSize = 1000;
 
-    RetryManager.execute(() => {
-      const lock = getLockManager().acquire('batch_insert');
-      try {
+    RetryEngine.execute(() => {
+      DistributedLockManager.executeWithLock(() => {
         let startRow = sheet.getLastRow() + 1;
         for (let i = 0; i < rows.length; i += chunkSize) {
           const chunk = rows.slice(i, i + chunkSize);
           sheet.getRange(startRow, 1, chunk.length, numCols).setValues(chunk);
           startRow += chunk.length;
         }
-      } finally {
-        getLockManager().release(lock);
-      }
+        SpreadsheetApp.flush();
+      }, 30000, 'SCRIPT');
     }, { operationName: `batchInsert on ${sheetName}`, maxRetries: 3 });
 
     // Write to Audit Trail
@@ -835,17 +738,15 @@ class Database {
     // Automatically chunk large batch updates
     const chunkSize = 1000;
 
-    RetryManager.execute(() => {
-      const lock = getLockManager().acquire('batch_update');
-      try {
+    RetryEngine.execute(() => {
+      DistributedLockManager.executeWithLock(() => {
         for (let i = 0; i < data.length; i += chunkSize) {
             const chunk = data.slice(i, i + chunkSize);
             const chunkRange = sheet.getRange(i + 2, 1, chunk.length, numCols);
             chunkRange.setValues(chunk);
         }
-      } finally {
-        getLockManager().release(lock);
-      }
+        SpreadsheetApp.flush();
+      }, 30000, 'SCRIPT');
     }, { operationName: `batchUpdate on ${sheetName}`, maxRetries: 3 });
 
     // Assuming we have original state for audit logging, in a real scenario we'd pass it.
@@ -879,13 +780,11 @@ class Database {
      const rowIndex = idData.findIndex(row => row[0] === id) + 2;
 
      if (rowIndex > 1) {
-       RetryManager.execute(() => {
-          const lock = getLockManager().acquire('hard_delete');
-          try {
+       RetryEngine.execute(() => {
+          DistributedLockManager.executeWithLock(() => {
             sheet.deleteRow(rowIndex);
-          } finally {
-            getLockManager().release(lock);
-          }
+            SpreadsheetApp.flush();
+          }, 30000, 'SCRIPT');
        }, { operationName: `hardDelete on ${sheetName}`});
      }
   }
