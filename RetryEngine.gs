@@ -52,11 +52,16 @@ class RetryEngine {
         }
 
         // Calculate next delay with exponential backoff and jitter
-        let exponentialDelay = baseDelayMs * Math.pow(2, attempt - 1);
-        if (exponentialDelay > maxDelayMs) exponentialDelay = maxDelayMs;
-        const jitterVariance = exponentialDelay * jitterFactor;
-        const jitter = (Math.random() * 2 - 1) * jitterVariance;
-        const delay = Math.max(0, Math.floor(exponentialDelay + jitter));
+        let delay;
+        if (error.details && error.details.retryAfterMs) {
+          delay = error.details.retryAfterMs;
+        } else {
+          let exponentialDelay = baseDelayMs * Math.pow(2, attempt - 1);
+          if (exponentialDelay > maxDelayMs) exponentialDelay = maxDelayMs;
+          const jitterVariance = exponentialDelay * jitterFactor;
+          const jitter = (Math.random() * 2 - 1) * jitterVariance;
+          delay = Math.max(0, Math.floor(exponentialDelay + jitter));
+        }
 
         try {
            getSystemLog().info(`RetryEngine: ${opName} failed. Retrying in ${delay}ms (Attempt ${attempt}/${maxRetries}).`, { error: error.message });

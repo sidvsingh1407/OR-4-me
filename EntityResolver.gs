@@ -26,7 +26,7 @@ class EntityResolver {
    */
   refreshAliasCache() {
     try {
-      const records = this.db.read('GraphAliases');
+      const records = this.db.findMany('GraphAliases');
       const aliasMap = {};
 
       for (const record of records) {
@@ -132,25 +132,25 @@ class EntityResolver {
     // 1. Check Exact Name Match or Domain/LinkedIn matches via index
     if (candidateProps.canonicalName) {
        indexMgr.lookup(nodeType, 'canonicalName', candidateProps.canonicalName).forEach(id => results.add(id));
-       const dbHits = this.db.read(nodeType, { canonicalName: candidateProps.canonicalName });
+       const dbHits = this.db.findMany(nodeType, { canonicalName: candidateProps.canonicalName });
        dbHits.forEach(r => results.add(r.uuid));
     }
 
     if (candidateProps.domain) {
        indexMgr.lookup(nodeType, 'domain', candidateProps.domain).forEach(id => results.add(id));
-       const dbHits = this.db.read(nodeType, { domain: candidateProps.domain });
+       const dbHits = this.db.findMany(nodeType, { domain: candidateProps.domain });
        dbHits.forEach(r => results.add(r.uuid));
     }
 
     if (candidateProps.linkedInUrl) {
        indexMgr.lookup(nodeType, 'linkedInUrl', candidateProps.linkedInUrl).forEach(id => results.add(id));
-       const dbHits = this.db.read(nodeType, { linkedInUrl: candidateProps.linkedInUrl });
+       const dbHits = this.db.findMany(nodeType, { linkedInUrl: candidateProps.linkedInUrl });
        dbHits.forEach(r => results.add(r.uuid));
     }
 
     if (candidateProps.website) {
        indexMgr.lookup(nodeType, 'website', candidateProps.website).forEach(id => results.add(id));
-       const dbHits = this.db.read(nodeType, { website: candidateProps.website });
+       const dbHits = this.db.findMany(nodeType, { website: candidateProps.website });
        dbHits.forEach(r => results.add(r.uuid));
     }
 
@@ -158,7 +158,7 @@ class EntityResolver {
     if (results.size === 0 && candidateProps.canonicalName) {
         // Read all nodes for fuzzy match. Only do this for smaller tables to prevent O(N) issues
         if (nodeType !== 'Companies') {
-           const allNodes = this.db.read(nodeType);
+           const allNodes = this.db.findMany(nodeType);
            for (const node of allNodes) {
                const sim = this.computeSimilarity(node.canonicalName, candidateProps.canonicalName);
                if (sim > 0.85) {

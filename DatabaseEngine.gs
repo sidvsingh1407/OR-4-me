@@ -785,6 +785,7 @@ class Database {
   }
 
   batchUpdate(sheetName, updatesById) {
+
     const sheet = this.ss.getSheetByName(sheetName);
     if (!sheet) throw new Error(`DatabaseEngine: Sheet ${sheetName} not found.`);
 
@@ -797,82 +798,73 @@ class Database {
     const timestamp = DBUtils.getTimestamp();
     const updatedIds = [];
     const indexMgr = getIndexManager();
-
-    // To ensure bulk efficiency, we read everything, update in memory, then overwrite the sheet.
-    const lastRow = sheet.getLastRow();
-    if (lastRow < 2) return [];
-
-    const dataRange = sheet.getRange(2, 1, lastRow - 1, numCols);
-    const data = dataRange.getValues();
     const schema = SCHEMA[sheetName] || {};
-    let hasUpdates = false;
-
-    for (let i = 0; i < data.length; i++) {
-      const row = data[i];
-      // Quick find _id index
-      const idIndex = headerMap['_id'];
-      if (idIndex === undefined) continue;
-
-      const recordId = row[idIndex];
-      const updates = updatesById[recordId];
-
-      if (updates) {
-        hasUpdates = true;
-        // Parse original
-        const originalRec = {};
-        for (const [colName, colIndex] of Object.entries(headerMap)) {
-          let val = row[colIndex];
-          if (schema[colName]) {
-            val = DBUtils.castValue(val, schema[colName].type);
-          }
-          originalRec[colName] = val;
-        }
-
-        if (originalRec._deleted === true) continue;
-
-        let updatedRec = { ...originalRec, ...updates };
-        updatedRec._updatedAt = timestamp;
-        updatedRec._version = (Number(updatedRec._version) || 0) + 1;
-        updatedRec = this._validateAndMap(sheetName, updatedRec, false);
-
-        if (tx.isActive) {
-          tx.registerMutation(sheetName, 'UPDATE', updatedRec._id, originalRec, updatedRec);
-        }
-
-        // Map back to row array
-        for (const [colName, colIndex] of Object.entries(headerMap)) {
-          let val = updatedRec[colName];
-          if (val !== undefined && val !== null) {
-            data[i][colIndex] = typeof val === 'object' ? DBUtils.safeStringify(val) : val;
-          } else {
-            data[i][colIndex] = '';
-          }
-        }
-        updatedIds.push(updatedRec._id);
-
-        // Update basic index
-        indexMgr.buildIndex(sheetName, '_id', [updatedRec]);
-      }
-    }
-
-    if (!hasUpdates) return [];
-
-    // Automatically chunk large batch updates
-    const chunkSize = 1000;
 
     RetryEngine.execute(() => {
       DistributedLockManager.executeWithLock(() => {
-        for (let i = 0; i < data.length; i += chunkSize) {
-            const chunk = data.slice(i, i + chunkSize);
-            const chunkRange = sheet.getRange(i + 2, 1, chunk.length, numCols);
-            chunkRange.setValues(chunk);
+        const lastRow = sheet.getLastRow();
+        if (lastRow < 2) return;
+
+        const dataRange = sheet.getRange(2, 1, lastRow - 1, numCols);
+        const data = dataRange.getValues();
+        let hasUpdates = false;
+
+        for (let i = 0; i < data.length; i++) {
+          const row = data[i];
+          const idIndex = headerMap['_id'];
+          if (idIndex === undefined) continue;
+
+          const recordId = row[idIndex];
+          const updates = updatesById[recordId];
+
+          if (updates) {
+            hasUpdates = true;
+            const originalRec = {};
+            for (const [colName, colIndex] of Object.entries(headerMap)) {
+              let val = row[colIndex];
+              if (schema[colName]) {
+                val = DBUtils.castValue(val, schema[colName].type);
+              }
+              originalRec[colName] = val;
+            }
+
+            if (originalRec._deleted === true) continue;
+
+            let updatedRec = { ...originalRec, ...updates };
+            updatedRec._updatedAt = timestamp;
+            updatedRec._version = (Number(updatedRec._version) || 0) + 1;
+            updatedRec = this._validateAndMap(sheetName, updatedRec, false);
+
+            if (tx.isActive) {
+              tx.registerMutation(sheetName, 'UPDATE', updatedRec._id, originalRec, updatedRec);
+            }
+
+            for (const [colName, colIndex] of Object.entries(headerMap)) {
+              let val = updatedRec[colName];
+              if (val !== undefined && val !== null) {
+                data[i][colIndex] = typeof val === 'object' ? DBUtils.safeStringify(val) : val;
+              } else {
+                data[i][colIndex] = '';
+              }
+            }
+            updatedIds.push(updatedRec._id);
+
+            indexMgr.buildIndex(sheetName, '_id', [updatedRec]);
+          }
         }
-        SpreadsheetApp.flush();
+
+        if (hasUpdates) {
+          const chunkSize = 1000;
+          for (let i = 0; i < data.length; i += chunkSize) {
+              const chunk = data.slice(i, i + chunkSize);
+              const chunkRange = sheet.getRange(i + 2, 1, chunk.length, numCols);
+              chunkRange.setValues(chunk);
+          }
+          SpreadsheetApp.flush();
+        }
       }, 30000, 'SCRIPT');
     }, { operationName: `batchUpdate on ${sheetName}`, maxRetries: 3 });
 
-    // Assuming we have original state for audit logging, in a real scenario we'd pass it.
-    // For now we just log the updates.
     this._writeAuditTrail(sheetName, 'UPDATE', updatedIds.map(id => updatesById[id]), null);
 
     return updatedIds;
@@ -894,21 +886,20 @@ class Database {
      const idColIndex = headerMap['_id'];
      if (idColIndex === undefined) return;
 
-     const lastRow = sheet.getLastRow();
-     if (lastRow < 2) return;
+     RetryEngine.execute(() => {
+        DistributedLockManager.executeWithLock(() => {
+          const lastRow = sheet.getLastRow();
+          if (lastRow < 2) return;
 
-     const idData = sheet.getRange(2, idColIndex + 1, lastRow - 1, 1).getValues();
+          const idData = sheet.getRange(2, idColIndex + 1, lastRow - 1, 1).getValues();
+          const rowIndex = idData.findIndex(row => row[0] === id) + 2;
 
-     const rowIndex = idData.findIndex(row => row[0] === id) + 2;
-
-     if (rowIndex > 1) {
-       RetryEngine.execute(() => {
-          DistributedLockManager.executeWithLock(() => {
+          if (rowIndex > 1) {
             sheet.deleteRow(rowIndex);
             SpreadsheetApp.flush();
-          }, 30000, 'SCRIPT');
-       }, { operationName: `hardDelete on ${sheetName}`});
-     }
+          }
+        }, 30000, 'SCRIPT');
+     }, { operationName: `hardDelete on ${sheetName}`});
   }
 
   _writeAuditTrail(sheetName, operation, records, previousValues) {

@@ -74,7 +74,7 @@ class GraphIndexManager {
   rebuildIndex(nodeType, field) {
     getExecutionLogger().info('GraphIndexManager', 'rebuildIndex', `Rebuilding index for ${nodeType}.${field}`);
     try {
-      const records = this.db.read(nodeType);
+      const records = this.db.findMany(nodeType);
       const indexData = {};
 
       for (const record of records) {
@@ -111,7 +111,7 @@ class GraphIndexManager {
      }
 
      const query = direction === 'IN' ? { targetNodeId: nodeId } : { sourceNodeId: nodeId };
-     const edges = this.db.read('Relationships', query);
+     const edges = this.db.findMany('Relationships', query);
      this._safeCachePut(key, JSON.stringify(edges));
      return edges;
   }

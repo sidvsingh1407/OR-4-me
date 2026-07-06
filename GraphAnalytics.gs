@@ -29,11 +29,11 @@ class GraphAnalytics {
     try {
       const registry = getGraphSchemaRegistry();
       for (const nodeType of Object.keys(registry.nodeTypes)) {
-        const records = this.db.read(nodeType);
+        const records = this.db.findMany(nodeType);
         metrics.nodeCounts[nodeType] = records.length;
       }
 
-      const relationships = this.db.read('Relationships');
+      const relationships = this.db.findMany('Relationships');
       metrics.totalRelationships = relationships.length;
 
       for (const rel of relationships) {
@@ -48,7 +48,7 @@ class GraphAnalytics {
   }
 
   getMostConnectedCompanies(limit = 10) {
-    const relationships = this.db.read('Relationships');
+    const relationships = this.db.findMany('Relationships');
     const degreeMap = {};
 
     for (const rel of relationships) {
@@ -77,7 +77,7 @@ class GraphAnalytics {
   }
 
   getMostCommonPainPoints(limit = 10) {
-    const relationships = this.db.read('Relationships', { relationshipType: 'COMPANY_HAS_PAIN' });
+    const relationships = this.db.findMany('Relationships', { relationshipType: 'COMPANY_HAS_PAIN' });
     const painMap = {};
 
     for (const rel of relationships) {
@@ -104,7 +104,7 @@ class GraphAnalytics {
   }
 
   detectTrends(days = 7) {
-    const logs = this.db.read('GraphLogs', { eventType: 'RELATIONSHIP_CREATED' });
+    const logs = this.db.findMany('GraphLogs', { eventType: 'RELATIONSHIP_CREATED' });
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - days);
 
@@ -125,7 +125,7 @@ class GraphAnalytics {
   // --- Requested Features ---
 
   getIndustryClustering(limit = 10) {
-     const relationships = this.db.read('Relationships', { relationshipType: 'COMPANY_OPERATES_IN' });
+     const relationships = this.db.findMany('Relationships', { relationshipType: 'COMPANY_OPERATES_IN' });
      const industryMap = {};
      for (const rel of relationships) {
         industryMap[rel.targetNodeId] = (industryMap[rel.targetNodeId] || 0) + 1;
@@ -142,7 +142,7 @@ class GraphAnalytics {
   }
 
   getExecutiveInfluence(limit = 10) {
-      const relationships = this.db.read('Relationships', { relationshipType: 'EXECUTIVE_WORKS_AT' });
+      const relationships = this.db.findMany('Relationships', { relationshipType: 'EXECUTIVE_WORKS_AT' });
       const execMap = {};
       for (const rel of relationships) {
           execMap[rel.sourceNodeId] = (execMap[rel.sourceNodeId] || 0) + 1;
@@ -159,7 +159,7 @@ class GraphAnalytics {
   }
 
   getCompanyInfluence(limit = 10) {
-      const relationships = this.db.read('Relationships');
+      const relationships = this.db.findMany('Relationships');
       const infMap = {};
 
       for (const rel of relationships) {
@@ -179,7 +179,7 @@ class GraphAnalytics {
   }
 
   getGrowthVelocity(days = 30) {
-      const relationships = this.db.read('Relationships', { relationshipType: 'COMPANY_HIRING_FOR' });
+      const relationships = this.db.findMany('Relationships', { relationshipType: 'COMPANY_HIRING_FOR' });
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - days);
 

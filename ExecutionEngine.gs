@@ -93,7 +93,7 @@ class ExecutionEngine {
     getExecutionLogger().debug('ExecutionEngine', 'ProcessTask', `Processing task ID: ${task._id}`, { type: task.taskType });
 
     try {
-      this.queueManager.markRunning(task._id);
+
 
       // Setup dynamic context for timeout manager
       this.timeoutManager.updateContext({

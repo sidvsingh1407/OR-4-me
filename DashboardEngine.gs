@@ -8,7 +8,7 @@
 class DashboardEngine {
   constructor() {
     this.logger = getExecutionLogger();
-    this.config = getConfig();
+    this.config = getAppConfig();
     this.db = getDatabase();
     this.SHEET_NAME = this.config.get('DASHBOARD.SHEET_NAME', 'Dashboard');
     this.HEADER_BG = this.config.get('DASHBOARD.COLORS.HEADER_BG', '#202124');

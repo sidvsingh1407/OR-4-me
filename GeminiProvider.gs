@@ -73,6 +73,9 @@ class GeminiProvider extends AIProvider {
         payload: JSON.stringify(payload)
       });
 
+      if (!response.isSuccess) {
+        throw new Error(`Gemini API Error: ${response.statusCode} - ${response.text}`);
+      }
       const data = JSON.parse(response.text);
       if (data.candidates && data.candidates.length > 0) {
         return data.candidates[0].content.parts[0].text;
@@ -110,6 +113,9 @@ class GeminiProvider extends AIProvider {
         payload: JSON.stringify(payload)
       });
 
+      if (!response.isSuccess) {
+        throw new Error(`Gemini API Error: ${response.statusCode} - ${response.text}`);
+      }
       const data = JSON.parse(response.text);
       if (data.candidates && data.candidates.length > 0) {
         return data.candidates[0].content.parts[0].text;
@@ -143,7 +149,7 @@ class GeminiProvider extends AIProvider {
         headers: { 'Content-Type': 'application/json' },
         payload: JSON.stringify(payload)
       });
-      return response.status === 200;
+      return response.statusCode === 200;
     } catch (e) {
       this.logger.warn('GeminiProvider', 'Health', 'Health check failed', e);
       return false;

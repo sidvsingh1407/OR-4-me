@@ -113,5 +113,5 @@ function getAutomationEngine() {
 }
 
 function TarkaX_Automation_DashboardRefresh() {
-  if (typeof TarkaX_Dashboard_Update === 'function') TarkaX_Dashboard_Update();
+  getDashboardEngine().updateDashboard();
 }

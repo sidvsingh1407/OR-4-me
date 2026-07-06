@@ -46,11 +46,13 @@ class KnowledgeGraphEngine {
       if (key !== 'metadata') record[key] = val;
     }
 
-    this.db.withLock(() => {
-      this.db.beginTransaction();
-      this.db.create(nodeType, record);
-      this.db.commitTransaction();
-    });
+    RetryEngine.execute(() => {
+      DistributedLockManager.executeWithLock(() => {
+      getTransactionManager().beginTransaction();
+      this.db.insert(nodeType, record);
+      getTransactionManager().commit();
+    }, 30000, 'SCRIPT');
+    }, { operationName: 'Knowledge Graph Operation', maxRetries: 3 });
 
     this.indexManager.updateIndex(nodeType, 'canonicalName', canonicalName, uuid);
     if (properties.domain) this.indexManager.updateIndex(nodeType, 'domain', properties.domain, uuid);
@@ -65,10 +67,11 @@ class KnowledgeGraphEngine {
     Validation.assertString(nodeType, 'Node Type');
     Validation.assertString(uuid, 'UUID');
 
-    this.db.withLock(() => {
-      this.db.beginTransaction();
+    RetryEngine.execute(() => {
+      DistributedLockManager.executeWithLock(() => {
+      getTransactionManager().beginTransaction();
 
-      const records = this.db.read(nodeType, { uuid: uuid });
+      const records = this.db.findMany(nodeType, { uuid: uuid });
       if (records.length === 0) throw new Error(`KnowledgeGraphEngine: Node ${uuid} not found in ${nodeType}`);
 
       const existingRecord = records[0];
@@ -80,8 +83,9 @@ class KnowledgeGraphEngine {
         ...properties
       });
 
-      this.db.commitTransaction();
-    });
+      getTransactionManager().commit();
+    }, 30000, 'SCRIPT');
+    }, { operationName: 'Knowledge Graph Operation', maxRetries: 3 });
 
     this._emitEvent('NODE_UPDATED', uuid, properties);
   }
@@ -90,12 +94,13 @@ class KnowledgeGraphEngine {
     Validation.assertString(nodeType, 'Node Type');
     Validation.assertString(uuid, 'UUID');
 
-    this.db.withLock(() => {
-      this.db.beginTransaction();
+    RetryEngine.execute(() => {
+      DistributedLockManager.executeWithLock(() => {
+      getTransactionManager().beginTransaction();
 
-      const records = this.db.read(nodeType, { uuid: uuid });
+      const records = this.db.findMany(nodeType, { uuid: uuid });
       if (records.length > 0) {
-        this.db.delete(nodeType, records[0]._id);
+        this.db.hardDelete(nodeType, records[0]._id);
 
         // Invalidate Node Indexes
         if (records[0].canonicalName) this.indexManager.removeFromIndex(nodeType, 'canonicalName', records[0].canonicalName, uuid);
@@ -104,19 +109,20 @@ class KnowledgeGraphEngine {
 
       const edges = this.findRelationships(uuid);
       for (const edge of edges) {
-        this.db.delete('Relationships', edge._id);
+        this.db.hardDelete('Relationships', edge._id);
         // Invalidate Rel Index
         this.indexManager.removeRelationshipFromIndex(edge.sourceNodeId, edge.targetNodeId, edge.relationshipId);
       }
 
-      this.db.commitTransaction();
-    });
+      getTransactionManager().commit();
+    }, 30000, 'SCRIPT');
+    }, { operationName: 'Knowledge Graph Operation', maxRetries: 3 });
 
     this._emitEvent('NODE_DELETED', uuid, { nodeType });
   }
 
   findNode(nodeType, uuid) {
-    const records = this.db.read(nodeType, { uuid: uuid });
+    const records = this.db.findMany(nodeType, { uuid: uuid });
     return records.length > 0 ? records[0] : null;
   }
 
@@ -138,8 +144,9 @@ class KnowledgeGraphEngine {
 
     if (existingEdges.length > 0) {
       const edge = existingEdges[0];
-      this.db.withLock(() => {
-         const dbEdges = this.db.read('Relationships', { relationshipId: edge.relationshipId });
+      RetryEngine.execute(() => {
+      DistributedLockManager.executeWithLock(() => {
+         const dbEdges = this.db.findMany('Relationships', { relationshipId: edge.relationshipId });
          if (dbEdges.length > 0) {
             this.db.update('Relationships', dbEdges[0]._id, {
                updatedAt: new Date().toISOString(),
@@ -147,7 +154,8 @@ class KnowledgeGraphEngine {
                metadata: JSON.stringify({ ...JSON.parse(dbEdges[0].metadata || '{}'), ...metadata })
             });
          }
-      });
+      }, 30000, 'SCRIPT');
+    }, { operationName: 'Knowledge Graph Operation', maxRetries: 3 });
       this._emitEvent('RELATIONSHIP_UPDATED', edge.relationshipId, { sourceNodeId, targetNodeId });
       return edge.relationshipId;
     }
@@ -167,11 +175,13 @@ class KnowledgeGraphEngine {
       updatedAt: timestamp
     };
 
-    this.db.withLock(() => {
-      this.db.beginTransaction();
-      this.db.create('Relationships', record);
-      this.db.commitTransaction();
-    });
+    RetryEngine.execute(() => {
+      DistributedLockManager.executeWithLock(() => {
+      getTransactionManager().beginTransaction();
+      this.db.insert('Relationships', record);
+      getTransactionManager().commit();
+    }, 30000, 'SCRIPT');
+    }, { operationName: 'Knowledge Graph Operation', maxRetries: 3 });
 
     // Update indexes dynamically
     this.indexManager.updateRelationshipIndex(sourceNodeId, targetNodeId, record);
@@ -183,17 +193,19 @@ class KnowledgeGraphEngine {
   deleteRelationship(relationshipId) {
     Validation.assertString(relationshipId, 'Relationship ID');
 
-    this.db.withLock(() => {
-      this.db.beginTransaction();
-      const records = this.db.read('Relationships', { relationshipId: relationshipId });
+    RetryEngine.execute(() => {
+      DistributedLockManager.executeWithLock(() => {
+      getTransactionManager().beginTransaction();
+      const records = this.db.findMany('Relationships', { relationshipId: relationshipId });
       if (records.length > 0) {
-         this.db.delete('Relationships', records[0]._id);
+         this.db.hardDelete('Relationships', records[0]._id);
 
          // Invalidate Rel Index
          this.indexManager.removeRelationshipFromIndex(records[0].sourceNodeId, records[0].targetNodeId, relationshipId);
       }
-      this.db.commitTransaction();
-    });
+      getTransactionManager().commit();
+    }, 30000, 'SCRIPT');
+    }, { operationName: 'Knowledge Graph Operation', maxRetries: 3 });
     this._emitEvent('RELATIONSHIP_DELETED', relationshipId);
   }
 
@@ -317,15 +329,16 @@ class KnowledgeGraphEngine {
   mergeNodes(targetNodeId, sourceNodeId) {
      if (targetNodeId === sourceNodeId) return;
 
-     this.db.withLock(() => {
-        this.db.beginTransaction();
+     RetryEngine.execute(() => {
+      DistributedLockManager.executeWithLock(() => {
+        getTransactionManager().beginTransaction();
 
         const inEdges = this.indexManager.getRelationships(sourceNodeId, 'IN');
         const outEdges = this.indexManager.getRelationships(sourceNodeId, 'OUT');
         const edges = [...inEdges, ...outEdges];
 
         for (const edge of edges) {
-           const dbEdges = this.db.read('Relationships', { relationshipId: edge.relationshipId });
+           const dbEdges = this.db.findMany('Relationships', { relationshipId: edge.relationshipId });
            if (dbEdges.length > 0) {
               if (edge.sourceNodeId === sourceNodeId) {
                  this.db.update('Relationships', dbEdges[0]._id, { sourceNodeId: targetNodeId });
@@ -338,16 +351,17 @@ class KnowledgeGraphEngine {
         }
 
         for (const type of Object.keys(getGraphSchemaRegistry().nodeTypes)) {
-           const records = this.db.read(type, { uuid: sourceNodeId });
+           const records = this.db.findMany(type, { uuid: sourceNodeId });
            if (records.length > 0) {
-              this.db.delete(type, records[0]._id);
+              this.db.hardDelete(type, records[0]._id);
               if (records[0].canonicalName) this.indexManager.removeFromIndex(type, 'canonicalName', records[0].canonicalName, sourceNodeId);
               break;
            }
         }
 
-        this.db.commitTransaction();
-     });
+        getTransactionManager().commit();
+     }, 30000, 'SCRIPT');
+    }, { operationName: 'Knowledge Graph Operation', maxRetries: 3 });
      this._emitEvent('NODE_MERGED', targetNodeId, { mergedFrom: sourceNodeId });
   }
 
@@ -427,7 +441,7 @@ class KnowledgeGraphEngine {
   _emitEvent(eventType, entityId, details = {}) {
     getExecutionLogger().info('KnowledgeGraphEngine', eventType, `Entity: ${entityId}`, details);
     try {
-      this.db.create('GraphLogs', {
+      this.db.insert('GraphLogs', {
         logId: Utilities.getUuid(),
         eventType: eventType,
         entityId: entityId,

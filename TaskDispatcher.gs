@@ -92,6 +92,10 @@ function getTaskDispatcher() {
     }
 
     // Auto-register Graph Tasks
+    if (typeof registerDashboardEngine === 'function') {
+       registerDashboardEngine();
+    }
+
     if (typeof registerGraphTasks === 'function') {
        registerGraphTasks();
     }
@@ -102,15 +106,15 @@ function getTaskDispatcher() {
     getTaskDispatcher.instance.registerTask('MAINTENANCE_STALE_CHECKPOINT_REMOVAL', () => getMaintenanceEngine().removeStaleCheckpoints());
     getTaskDispatcher.instance.registerTask('MAINTENANCE_TEMP_DATA_CLEANUP', () => getMaintenanceEngine().cleanupTempData());
     getTaskDispatcher.instance.registerTask('MAINTENANCE_REBUILD_INDEXES', () => getGraphIndexManager().buildIndexes());
-    getTaskDispatcher.instance.registerTask('MAINTENANCE_REFRESH_DASHBOARD', () => { if (typeof TarkaX_Dashboard_Update === 'function') TarkaX_Dashboard_Update(); });
+    getTaskDispatcher.instance.registerTask('MAINTENANCE_REFRESH_DASHBOARD', () => { getDashboardEngine().updateDashboard(); });
     getTaskDispatcher.instance.registerTask('MAINTENANCE_GRAPH_OPTIMIZATION', () => { if (typeof getGraphAnalytics === 'function') getGraphAnalytics().optimizeGraph(); else getSystemLog().warn('Maintenance', 'Graph optimization not available'); });
     getTaskDispatcher.instance.registerTask('MAINTENANCE_DUPLICATE_REEVALUATION', () => { if (typeof getEntityResolver === 'function') getEntityResolver().resolveAliases(); });
     getTaskDispatcher.instance.registerTask('MAINTENANCE_SCORE_RECALCULATION', () => { if (typeof getScoringEngine === 'function') getScoringEngine().recalculateAll(); });
-    getTaskDispatcher.instance.registerTask('MAINTENANCE_ONTOLOGY_REFRESH', () => { if (typeof getPainOntologyEngine === 'function') getPainOntologyEngine().initializeNodes(); });
+    getTaskDispatcher.instance.registerTask('MAINTENANCE_ONTOLOGY_REFRESH', () => { if (typeof getAIPainOntologyEngine === 'function') getAIPainOntologyEngine().initializeNodes(); });
     getTaskDispatcher.instance.registerTask('MAINTENANCE_CRAWLER_STATS_CLEANUP', () => { getSystemLog().info('Maintenance', 'Crawler Stats cleanup omitted.'); });
     getTaskDispatcher.instance.registerTask('MAINTENANCE_ARCHIVE_LEADS', () => getMaintenanceEngine().archiveOldLeads());
     getTaskDispatcher.instance.registerTask('MAINTENANCE_ARCHIVE_LOGS', () => getMaintenanceEngine().archiveMetrics());
-    getTaskDispatcher.instance.registerTask('MAINTENANCE_REBUILD_SUMMARY_TABLES', () => { if (typeof TarkaX_Dashboard_Update === 'function') TarkaX_Dashboard_Update(); });
+    getTaskDispatcher.instance.registerTask('MAINTENANCE_REBUILD_SUMMARY_TABLES', () => { getDashboardEngine().updateDashboard(); });
     getTaskDispatcher.instance.registerTask('MAINTENANCE_OPTIMIZE_METRICS', () => getSystemLog().info('Maintenance', 'Optimize Metrics omitted.'));
     getTaskDispatcher.instance.registerTask('MAINTENANCE_REFRESH_CONFIG_CACHE', () => { getAppConfig().clear(); getAppConfig(); });
 

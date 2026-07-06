@@ -58,14 +58,18 @@ class QueueManager {
    * @param {number} limit
    */
   getNextBatch(limit = 10) {
-    const db = getDatabase();
-    // In Phase 3, we fetch pending tasks. A robust query might need an index on 'status'
-    // but the generic DB supports filtering via findMany.
-    const tasks = db.findMany('Queue', { status: 'PENDING' });
 
-    // Sort logic could go here if we supported priority or creation time sorting explicitly.
-    // Assuming chronological order by default findMany.
-    return tasks.slice(0, limit);
+    const db = getDatabase();
+    const allPending = db.findMany('Queue', { status: 'PENDING' });
+    const batch = allPending.slice(0, limit);
+
+    if (batch.length > 0) {
+      const updates = {};
+      batch.forEach(t => { updates[t._id] = { status: 'RUNNING' }; });
+      db.batchUpdate('Queue', updates);
+    }
+
+    return batch;
   }
 
   /**

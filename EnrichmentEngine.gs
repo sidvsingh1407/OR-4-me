@@ -114,12 +114,12 @@ class EnrichmentEngine {
   }
 
   fetchRawLeadById(rawLeadId) {
-    const rawLeads = this.db.query('RawLeads', { rawLeadId: rawLeadId });
+    const rawLeads = this.db.findMany('RawLeads', { rawLeadId: rawLeadId });
     return rawLeads.length > 0 ? rawLeads[0] : null;
   }
 
   fetchPendingRawLeads(limit) {
-    const rawLeads = this.db.query('RawLeads', { enrichmentStatus: 'PENDING' });
+    const rawLeads = this.db.findMany('RawLeads', { enrichmentStatus: 'PENDING' });
     return rawLeads.slice(0, limit);
   }
 
@@ -152,12 +152,12 @@ class EnrichmentEngine {
         // Batch Insert Leads
         if (successfullyEnriched.length > 0) {
            const leadsToInsert = successfullyEnriched.map(item => item.data);
-           this.db.insert('Leads', leadsToInsert);
+           this.db.batchInsert('Leads', leadsToInsert);
 
            // Update successfully processed RawLeads
-           for (const item of successfullyEnriched) {
-             this.db.update('RawLeads', item.rawLeadId, { enrichmentStatus: 'PROCESSED', lastAttempt: new Date().toISOString() });
-           }
+           const updates = {};
+           for (const item of successfullyEnriched) { updates[item.rawLeadId] = { enrichmentStatus: 'PROCESSED', lastAttempt: new Date().toISOString() }; }
+           this.db.batchUpdate('RawLeads', updates);
         }
 
         // Update failed RawLeads

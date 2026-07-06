@@ -84,7 +84,7 @@ class DiscoveryEngine {
 
         case DISCOVERY_STATES.LOAD_HISTORY:
           // Fetch previous active searches
-          const historyRecords = this.db.query('DiscoveryHistory', { status: 'ACTIVE' }, 50);
+          const historyRecords = this.db.findMany('DiscoveryHistory', { status: 'ACTIVE' }).slice(0, 50);
           currentState.history = historyRecords.map(r => r.searchQuery);
           currentState.state = DISCOVERY_STATES.LOAD_RESULTS;
           currentState.progress = 10;
@@ -168,7 +168,7 @@ class DiscoveryEngine {
           currentState.searches = currentState.searches.filter(s => s.query && s.query.length > 10 && s.query.length < 200);
 
           // Blacklist check
-          const blacklistRecords = this.db.query('DiscoveryBlacklist', {}, 100);
+          const blacklistRecords = this.db.findMany('DiscoveryBlacklist', {}).slice(0, 100);
           const blacklistedTerms = blacklistRecords.map(r => r.term.toLowerCase());
 
           currentState.searches = currentState.searches.filter(s => {

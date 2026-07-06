@@ -26,7 +26,7 @@ class HttpClient {
     try {
       return UrlFetchApp.fetch(url, params);
     } catch (e) {
-      throw new NetworkError(`Failed to fetch URL: ${url}`, { originalError: e.message });
+      throw new NetworkError(`Failed to fetch URL: ${url}`, { originalError: e.message, isNative: true });
     }
   }
 
@@ -67,10 +67,24 @@ class HttpClient {
     const operation = () => {
       const response = this._fetchNative(url, params);
       const statusCode = response.getResponseCode();
+      const headers = response.getHeaders();
 
-      // Treat 429 (Too Many Requests) and 5xx as retryable
-      if (statusCode === 429 || statusCode >= 500) {
-         throw new NetworkError(`HTTP Error ${statusCode}`, { statusCode, url });
+      // Treat 429 (Too Many Requests), 408 (Timeout) and 5xx as retryable
+      if (statusCode === 429 || statusCode === 408 || statusCode >= 500) {
+         let retryAfterMs = null;
+         if (statusCode === 429) {
+            // Check Retry-After header
+            let retryAfterStr = headers['Retry-After'] || headers['retry-after'];
+            if (retryAfterStr) {
+               const parsed = parseInt(retryAfterStr, 10);
+               if (!isNaN(parsed)) {
+                  retryAfterMs = parsed * 1000; // usually in seconds
+               } else {
+                  // Might be an HTTP date, but let's fallback to default backoff
+               }
+            }
+         }
+         throw new NetworkError(`HTTP Error ${statusCode}`, { statusCode, url, retryAfterMs });
       }
 
       // Return unified response structure
@@ -85,7 +99,7 @@ class HttpClient {
 
       return {
         statusCode: statusCode,
-        headers: response.getHeaders(),
+        headers: headers,
         text: data,
         json: parsedJson,
         isSuccess: statusCode >= 200 && statusCode < 300
@@ -93,15 +107,14 @@ class HttpClient {
     };
 
     const isRetryable = (error) => {
-      if (error instanceof NetworkError && error.details && error.details.statusCode) {
-         const code = error.details.statusCode;
-         return code === 429 || code >= 500;
+      if (error instanceof NetworkError && error.details) {
+         if (error.details.isNative) return true;
+         if (error.details.statusCode) {
+             const code = error.details.statusCode;
+             return code === 429 || code === 408 || code >= 500;
+         }
       }
-      const msg = error.message.toLowerCase();
-      if (msg.includes('timeout') || msg.includes('dns') || msg.includes('connection error')) {
-         return true;
-      }
-      return false;
+      return false; // For HTTP errors < 500 except 429 and 408, do not retry
     };
 
     return RetryEngine.execute(operation, {
