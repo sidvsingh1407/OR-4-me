@@ -42,7 +42,12 @@ class DashboardEngine {
       // Self-healing: if the sheet doesn't exist, this creates and builds the visual framework
       this.createDashboard();
 
-      const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(this.SHEET_NAME);
+      let ss = SpreadsheetApp.getActiveSpreadsheet();
+      if (!ss) {
+        const ssId = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID');
+        if (ssId) ss = SpreadsheetApp.openById(ssId);
+      }
+      const sheet = ss ? ss.getSheetByName(this.SHEET_NAME) : null;
       if (!sheet) return; // Edge case or unbound script
 
       const props = getScriptProps();
@@ -87,7 +92,11 @@ class DashboardEngine {
   createDashboard() {
     let sheet;
     try {
-        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        let ss = SpreadsheetApp.getActiveSpreadsheet();
+        if (!ss) {
+          const ssId = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID');
+          if (ssId) ss = SpreadsheetApp.openById(ssId);
+        }
         if (!ss) return; // In non-bound environments
         sheet = ss.getSheetByName(this.SHEET_NAME);
     } catch (e) {
@@ -120,6 +129,10 @@ class DashboardEngine {
     let ss;
     try {
         ss = SpreadsheetApp.getActiveSpreadsheet();
+        if (!ss) {
+          const ssId = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID');
+          if (ssId) ss = SpreadsheetApp.openById(ssId);
+        }
         if (!ss) return;
     } catch (e) {
         return;

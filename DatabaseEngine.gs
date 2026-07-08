@@ -293,7 +293,12 @@ class FailSafeLogger {
   }
 
   _writeToSheet(level, module, operation, message, error, details) {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (!ss) {
+      const p = PropertiesService.getScriptProperties();
+      const sid = p.getProperty('SPREADSHEET_ID');
+      if (sid) ss = SpreadsheetApp.openById(sid);
+    }
     if (!ss) throw new Error("No active spreadsheet found.");
 
     let sheet = ss.getSheetByName('SystemLogs');
@@ -591,6 +596,13 @@ class Database {
     }
 
     this.ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (!this.ss) {
+      const props = PropertiesService.getScriptProperties();
+      const ssId = props.getProperty('SPREADSHEET_ID');
+      if (ssId) {
+        this.ss = SpreadsheetApp.openById(ssId);
+      }
+    }
     if (!this.ss) {
       throw new Error("DatabaseEngine: Active spreadsheet not found.");
     }
