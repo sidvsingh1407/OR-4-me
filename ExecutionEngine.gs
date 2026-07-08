@@ -193,9 +193,12 @@ function TarkaX_System_Start() {
   }
 
   if (!dispatcher.taskExists('CRAWL')) {
-      dispatcher.registerTask('CRAWL', (payload) => {
-         return getCrawlerEngine().execute(payload);
-      });
+      dispatcher.registerTask('CRAWL', (payload) => { return getCrawlerEngine().execute(payload); });
+      dispatcher.registerTask('CRAWL_RSS', (payload) => { return getCrawlerEngine().execute({ ...payload, plugin: 'RSS' }); });
+      dispatcher.registerTask('CRAWL_GITHUB', (payload) => { return getCrawlerEngine().execute({ ...payload, plugin: 'GitHub' }); });
+      dispatcher.registerTask('CRAWL_REDDIT', (payload) => { return getCrawlerEngine().execute({ ...payload, plugin: 'Reddit' }); });
+      dispatcher.registerTask('CRAWL_JOBS', (payload) => { return getCrawlerEngine().execute({ ...payload, plugin: 'Greenhouse' }); });
+      dispatcher.registerTask('CRAWL_FUNDING', (payload) => { return getCrawlerEngine().execute({ ...payload, plugin: 'Crunchbase' }); });
   }
 
   const engine = getExecutionEngine();

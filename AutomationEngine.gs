@@ -115,3 +115,36 @@ function getAutomationEngine() {
 function TarkaX_Automation_DashboardRefresh() {
   if (typeof TarkaX_Dashboard_Update === 'function') TarkaX_Dashboard_Update();
 }
+
+/**
+ * PUBLIC ENTRY POINT: Installation
+ * Run this function exactly once on a fresh deployment.
+ * It will construct the database schemas and initialize all required triggers.
+ */
+function TarkaX_System_Install() {
+  const logger = getSystemLog();
+  logger.info('System', 'TarkaX_System_Install', 'Beginning system installation...');
+
+  try {
+    // 1. Initialize Database & Schemas (Creates sheets and headers)
+    const db = getDatabase();
+    db.initialize();
+
+    // 2. Initialize Ontology
+    const ontology = getPainOntologyEngine();
+    ontology.initializeOntology();
+
+    // 3. Setup Triggers
+    const triggerManager = getTriggerManager();
+    triggerManager.initializeSystemTriggers();
+
+    // 4. Create Dashboard
+    const dashboard = new DashboardEngine();
+    dashboard.createDashboard();
+
+    logger.info('System', 'TarkaX_System_Install', 'Installation completed successfully.');
+  } catch (e) {
+    logger.error('System', 'TarkaX_System_Install', 'Installation failed.', e);
+    throw e;
+  }
+}

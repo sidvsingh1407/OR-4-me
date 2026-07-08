@@ -87,8 +87,13 @@ function getTaskDispatcher() {
 
 
     // Auto-register known engines
+    getTaskDispatcher.instance.registerTask('SCORE_LEAD', (payload) => { return getScoringEngine().scoreLead(payload.leadId); });
+
     if (typeof registerEnrichmentEngine === 'function') {
        registerEnrichmentEngine();
+    }
+    if (typeof registerDashboardEngine === 'function') {
+       registerDashboardEngine();
     }
 
     // Auto-register Graph Tasks

@@ -95,11 +95,22 @@ class CrawlerEngine {
               }
            }
 
-           // Queue accepted records for Enrichment
+           // Persist to RawLeads first, then Queue accepted records for Enrichment
            if (acceptedRecords.length > 0) {
+              const db = getDatabase();
+              const rawLeadsPayload = acceptedRecords.map(r => ({
+                 _id: r.id,
+                 source: pluginName,
+                 url: r.url,
+                 title: r.title,
+                 rawJson: JSON.stringify(r),
+                 enrichmentStatus: 'PENDING'
+              }));
+              db.batchInsert('RawLeads', rawLeadsPayload);
+
               const queueItems = acceptedRecords.map(r => ({
-                 taskType: 'ENRICHMENT',
-                 payload: r
+                 taskType: 'ENRICH_LEAD',
+                 payload: { rawLeadId: r._id || r.id }
               }));
               this.queueManager.enqueueBatch(queueItems);
               totalProcessed += acceptedRecords.length;

@@ -152,7 +152,15 @@ class EnrichmentEngine {
         // Batch Insert Leads
         if (successfullyEnriched.length > 0) {
            const leadsToInsert = successfullyEnriched.map(item => item.data);
-           this.db.insert('Leads', leadsToInsert);
+           this.db.batchInsert('Leads', leadsToInsert);
+
+           // Enqueue for Scoring
+           const scoreTasks = successfullyEnriched.map(item => ({
+              taskType: 'SCORE_LEAD',
+              payload: { leadId: item.data._id || item.data.id }
+           }));
+           this.queueManager.enqueueBatch(scoreTasks);
+
 
            // Update successfully processed RawLeads
            for (const item of successfullyEnriched) {
