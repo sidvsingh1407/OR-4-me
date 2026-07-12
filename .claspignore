@@ -1,15 +1,15 @@
-**/**
-!build/**
-!dist/**
-!src/**
-!*.js
-!*.ts
-!*.html
-!appsscript.json
+# Block the AI's hidden scratch folders
+.gemini/
+**/.gemini/**
 
+# Block all node modules, no matter how deep
 node_modules/
+**/node_modules/**
+
+# Standard ignores
 .git/
+**/.git/**
 .env
 *.md
-package.json
-package-lock.json
+*.patch
+package*.json
