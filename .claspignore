@@ -1,0 +1,15 @@
+**/**
+!build/**
+!dist/**
+!src/**
+!*.js
+!*.ts
+!*.html
+!appsscript.json
+
+node_modules/
+.git/
+.env
+*.md
+package.json
+package-lock.json
