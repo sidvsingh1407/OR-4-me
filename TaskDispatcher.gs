@@ -88,6 +88,7 @@ function getTaskDispatcher() {
 
     // Auto-register known engines
     getTaskDispatcher.instance.registerTask('SCORE_LEAD', (payload) => { return getScoringEngine().scoreLead(payload.leadId); });
+    getTaskDispatcher.instance.registerTask('PRODUCT_RECOMMENDATION', (payload) => { return getRecommendationEngine().analyzeLead(payload.leadId); });
 
     if (typeof registerEnrichmentEngine === 'function') {
        registerEnrichmentEngine();

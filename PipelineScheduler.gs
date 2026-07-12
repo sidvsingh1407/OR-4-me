@@ -22,6 +22,7 @@ class PipelineScheduler {
       'CRAWLER_FUNDING',
       'ENRICHMENT',
       'PAIN_DETECTION',
+      'PRODUCT_RECOMMENDATION',
       'BUYING_INTENT',
       'DEDUPLICATION',
       'DASHBOARD_UPDATE',
@@ -96,6 +97,7 @@ class PipelineScheduler {
         break;
       case 'ENRICHMENT':
       case 'PAIN_DETECTION':
+      case 'PRODUCT_RECOMMENDATION':
       case 'BUYING_INTENT':
       case 'DEDUPLICATION':
         // These typically run continuously on queued items,
