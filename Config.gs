@@ -200,6 +200,72 @@ function getAppConfig() {
         'jasper'
       ],
 
+      // Recommendation Engine Defaults
+      'RECOMMENDATION.PRODUCTS': {
+        'AI_AUDIT': {
+          id: 'AI_AUDIT',
+          name: 'AI Audit',
+          description: 'Assess AI maturity, governance, and roadmap.',
+          signals: [
+            'Low AI adoption', 'No AI strategy', 'Executive uncertainty',
+            'AI governance issues', 'Compliance concerns', 'AI ROI uncertainty',
+            'Shadow AI', 'AI policy gaps', 'Poor AI maturity', 'Organization-wide AI confusion'
+          ],
+          businessOutcomes: [
+            'Improved AI governance', 'Reduced implementation risk',
+            'Executive visibility', 'Clear AI roadmap'
+          ],
+          discoveryQuestions: [
+            'How are you currently tracking AI usage across different departments?',
+            'What is your executive team\'s biggest concern regarding AI adoption?',
+            'Do you have a formalized AI governance policy in place?'
+          ],
+          firstConversationAngle: 'Focus on risk mitigation, strategic alignment, and establishing a clear roadmap for AI adoption.'
+        },
+        'WORKFLOW_DIAGNOSTIC': {
+          id: 'WORKFLOW_DIAGNOSTIC',
+          name: 'Workflow Diagnostic',
+          description: 'Optimize workflows and identify automation opportunities.',
+          signals: [
+            'Manual workflows', 'Process bottlenecks', 'Context switching',
+            'Repetitive work', 'Poor operational efficiency', 'Automation failures',
+            'Slow internal processes', 'Employee productivity issues'
+          ],
+          businessOutcomes: [
+            'Increased productivity', 'Reduced manual work',
+            'Faster operations', 'Higher automation ROI'
+          ],
+          discoveryQuestions: [
+            'Which of your team\'s daily tasks are the most repetitive or time-consuming?',
+            'Where do you see the biggest bottlenecks in your current operational workflows?',
+            'How are you currently measuring the ROI of your automation efforts?'
+          ],
+          firstConversationAngle: 'Focus on operational efficiency, eliminating repetitive tasks, and accelerating internal processes.'
+        },
+        'PROMPT_STUDIO': {
+          id: 'PROMPT_STUDIO',
+          name: 'Prompt Studio',
+          description: 'Standardize prompts and improve AI output quality.',
+          signals: [
+            'Prompt inconsistency', 'Prompt chaos', 'Hallucination complaints',
+            'Prompt duplication', 'Multiple prompt versions', 'Low-quality AI outputs',
+            'Teams struggling with prompts', 'No prompt governance', 'Poor prompt reuse'
+          ],
+          businessOutcomes: [
+            'Better prompt quality', 'Consistent AI outputs',
+            'Reduced prompt duplication', 'Team-wide prompt governance'
+          ],
+          discoveryQuestions: [
+            'How are your teams currently sharing and reusing successful AI prompts?',
+            'Are you experiencing issues with inconsistent or hallucinated AI outputs?',
+            'What is your process for version controlling and updating prompts?'
+          ],
+          firstConversationAngle: 'Focus on quality control, standardization, and empowering teams to get reliable outputs from AI models.'
+        }
+      },
+      'RECOMMENDATION.THRESHOLDS.HIGH_CONFIDENCE': 75,
+      'RECOMMENDATION.THRESHOLDS.MIN_FIT_SCORE': 30,
+
       // Scoring Engine Defaults
       'SCORING.MAX_SCORE': 100,
 

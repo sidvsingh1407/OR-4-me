@@ -75,7 +75,20 @@ const SCHEMA = {
     detectedPains: { type: 'string' },
     signalBreakdown: { type: 'string' },
     scoreBreakdown: { type: 'string' },
-    calculatedAt: { type: 'string' }
+    calculatedAt: { type: 'string' },
+    // Recommendation Engine output columns
+    primaryProduct: { type: 'string' },
+    secondaryProduct: { type: 'string' },
+    futureUpsell: { type: 'string' },
+    aiAuditFit: { type: 'number', default: 0 },
+    workflowDiagnosticFit: { type: 'number', default: 0 },
+    promptStudioFit: { type: 'number', default: 0 },
+    recommendationConfidence: { type: 'number', default: 0 },
+    recommendationReason: { type: 'string' },
+    expectedBusinessOutcome: { type: 'string' },
+    salesBrief: { type: 'string' },
+    opportunityCategory: { type: 'string' },
+    estimatedPriority: { type: 'string' }
   },
   RawLeads: {
     rawLeadId: { type: 'string', required: true },

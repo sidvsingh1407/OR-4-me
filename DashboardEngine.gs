@@ -304,6 +304,22 @@ class DashboardEngine {
     sheet.getRange(96, 8, sysLabels.length, 2).setBackground('white').setBorder(true, true, true, true, true, true);
     sheet.getRange(96, 8, sysLabels.length, 1).setFontWeight('bold');
 
+    // SECTION 13 — PRODUCT INTELLIGENCE
+    applyHeader(115, 2, "SECTION 13 — PRODUCT INTELLIGENCE", 8);
+    const productLabels = [
+        ['AI Audit Opportunities', ''],
+        ['Workflow Diagnostic Opportunities', ''],
+        ['Prompt Studio Opportunities', ''],
+        ['High Priority Recommendations', ''],
+        ['Avg Recommendation Confidence', '']
+    ];
+    this._safeWrite(sheet, 116, 2, productLabels);
+    sheet.getRange(116, 2, productLabels.length, 2).setBackground('white').setBorder(true, true, true, true, true, true);
+    sheet.getRange(116, 2, productLabels.length, 1).setFontWeight('bold');
+
+    applyTableHeaders(116, 5, ['Product', 'Total Recommended', 'Avg Confidence', 'Primary Targets']);
+    sheet.getRange(117, 5, 5, 4).setBackground('white').setBorder(true, true, true, true, true, true);
+
     // Let's autosize everything
     for(let i=1; i<=15; i++) {
         try { sheet.autoResizeColumn(i); } catch (e) {}
@@ -334,6 +350,7 @@ class DashboardEngine {
         this.updateStatistics(sheet, aggregated);
         this.updateTrends(sheet, aggregated);
         this.updateKnowledgeGraphMetrics(sheet);
+        this.updateProductIntelligence(sheet, aggregated);
 
         this.updateCharts(sheet);
     }
@@ -370,7 +387,15 @@ class DashboardEngine {
             successfulCrawlsToday: 0
         },
 
-        leads: leads // keep reference for rankings
+        leads: leads, // keep reference for rankings
+        productRecommendations: {
+            'AI Audit': { count: 0, sumConfidence: 0, targets: new Set() },
+            'Workflow Diagnostic': { count: 0, sumConfidence: 0, targets: new Set() },
+            'Prompt Studio': { count: 0, sumConfidence: 0, targets: new Set() }
+        },
+        highPriorityRecommendations: 0,
+        totalRecommendations: 0,
+        sumRecommendationConfidence: 0
     };
 
     // Single pass over Leads
@@ -421,6 +446,24 @@ class DashboardEngine {
             obj.count++;
             obj.sumScore += score;
             agg.countryMap.set(country, obj);
+        }
+
+        // Aggregate Recommendations
+        if (lead.primaryProduct) {
+            const prod = lead.primaryProduct;
+            if (agg.productRecommendations[prod]) {
+                const conf = parseFloat(lead.recommendationConfidence) || 0;
+                agg.productRecommendations[prod].count++;
+                agg.productRecommendations[prod].sumConfidence += conf;
+                agg.productRecommendations[prod].targets.add(lead.company);
+
+                agg.totalRecommendations++;
+                agg.sumRecommendationConfidence += conf;
+
+                if (lead.estimatedPriority === 'High') {
+                    agg.highPriorityRecommendations++;
+                }
+            }
         }
     }
 
@@ -607,6 +650,33 @@ class DashboardEngine {
         [getCount('Technologies')]
     ];
     this._safeWrite(sheet, 96, 3, values);
+  }
+
+  updateProductIntelligence(sheet, agg) {
+    const aiAuditCount = agg.productRecommendations['AI Audit'].count;
+    const workflowDiagCount = agg.productRecommendations['Workflow Diagnostic'].count;
+    const promptStudioCount = agg.productRecommendations['Prompt Studio'].count;
+
+    const avgConfidence = agg.totalRecommendations ? (agg.sumRecommendationConfidence / agg.totalRecommendations).toFixed(1) + '%' : '0%';
+
+    const values = [
+        [aiAuditCount],
+        [workflowDiagCount],
+        [promptStudioCount],
+        [agg.highPriorityRecommendations],
+        [avgConfidence]
+    ];
+
+    this._safeWrite(sheet, 116, 3, values);
+
+    // Table values
+    const tableData = [
+        ['AI Audit', aiAuditCount, aiAuditCount ? (agg.productRecommendations['AI Audit'].sumConfidence / aiAuditCount).toFixed(1) + '%' : '0%', Array.from(agg.productRecommendations['AI Audit'].targets).slice(0, 3).join(', ')],
+        ['Workflow Diagnostic', workflowDiagCount, workflowDiagCount ? (agg.productRecommendations['Workflow Diagnostic'].sumConfidence / workflowDiagCount).toFixed(1) + '%' : '0%', Array.from(agg.productRecommendations['Workflow Diagnostic'].targets).slice(0, 3).join(', ')],
+        ['Prompt Studio', promptStudioCount, promptStudioCount ? (agg.productRecommendations['Prompt Studio'].sumConfidence / promptStudioCount).toFixed(1) + '%' : '0%', Array.from(agg.productRecommendations['Prompt Studio'].targets).slice(0, 3).join(', ')]
+    ];
+
+    this._safeWrite(sheet, 117, 5, tableData);
   }
 
   updatePipelineMonitoring(sheet, queue) {
