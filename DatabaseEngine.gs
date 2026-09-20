@@ -318,6 +318,9 @@ class FailSafeLogger {
     if (!sheet) {
       // Attempt emergency sheet creation
       sheet = ss.insertSheet('SystemLogs');
+      // Delete empty rows and columns to avoid 10M cell limit
+      if (sheet.getMaxColumns() > 9) sheet.deleteColumns(10, sheet.getMaxColumns() - 9);
+      if (sheet.getMaxRows() > 100) sheet.deleteRows(101, sheet.getMaxRows() - 100);
       sheet.appendRow(['_id', '_createdAt', 'timestamp', 'level', 'module', 'operation', 'message', 'stack', 'details']);
     }
 
@@ -662,6 +665,18 @@ class Database {
     let sheet = this.ss.getSheetByName(sheetName);
     if (!sheet) {
       sheet = this.ss.insertSheet(sheetName);
+
+      const schemaFields = Object.keys(SCHEMA[sheetName] || {});
+      const allRequiredFields = [...SYSTEM_COLUMNS, ...schemaFields];
+      const maxCols = Math.max(1, allRequiredFields.length);
+
+      // Prevent 10M cell limit error by deleting unused columns and rows
+      if (sheet.getMaxColumns() > maxCols) {
+        sheet.deleteColumns(maxCols + 1, sheet.getMaxColumns() - maxCols);
+      }
+      if (sheet.getMaxRows() > 100) {
+        sheet.deleteRows(101, sheet.getMaxRows() - 100);
+      }
       getLogger().info('DatabaseEngine', '_ensureSheetExists', `Created sheet: ${sheetName}`);
     }
     return sheet;
