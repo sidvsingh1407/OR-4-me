@@ -5260,3 +5260,10 @@ function getAIPainOntologyEngine() {
   }
   return _aiPainOntologyEngineInstance;
 }
+
+/**
+ * Alias for getAIPainOntologyEngine to resolve ReferenceErrors.
+ */
+function getPainOntologyEngine() {
+  return getAIPainOntologyEngine();
+}
