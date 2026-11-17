@@ -311,6 +311,7 @@ class ContactEnrichmentEngine {
 
     const url = 'https://api.apollo.io/api/v1/people/match';
     const payload = {
+      api_key: apiKey,
       first_name: firstName,
       last_name: lastName || undefined,
       domain: domain,
@@ -318,7 +319,7 @@ class ContactEnrichmentEngine {
     };
 
     try {
-      const response = this.httpClient.post(url, payload, {
+      const response = this.httpClient.post(url, JSON.stringify(payload), {
         'x-api-key': apiKey,
         'Content-Type': 'application/json'
       });
@@ -337,7 +338,7 @@ class ContactEnrichmentEngine {
       const isVerified = person.email_status === 'verified';
       return {
         executiveEmail: person.email,
-        emailConfidence: isVerified ? 'HIGH' : 'MEDIUM',
+        emailConfidence: isVerified ? 'HIGH' : 'LOW',
         emailSource: 'APOLLO',
         emailVerificationStatus: isVerified ? 'VERIFIED' : 'UNVERIFIED'
       };

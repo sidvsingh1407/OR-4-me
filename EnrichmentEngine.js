@@ -266,19 +266,36 @@ class EnrichmentEngine {
    */
   validateVerbatimQuote(rawText, quote) {
     if (!quote || typeof quote !== 'string') return '';
-    const cleanQuote = quote.trim();
+    const cleanQuote = quote.trim().replace(/^["'“”‘’]+|["'“”‘’]+$/g, '');
     if (cleanQuote.length < 5) return '';
 
-    const norm = (s) => s.toLowerCase().replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim();
-    const normalizedRaw = norm(rawText);
-    const normalizedQuote = norm(cleanQuote);
+    const flat = (text) => {
+      let t = String(text || '')
+        .replace(/[\u2018\u2019]/g, "'")
+        .replace(/[\u201C\u201D]/g, '"')
+        .replace(/[\u2013\u2014]/g, '-')
+        .replace(/\u2026/g, '...');
+      return t.toLowerCase().replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim();
+    };
 
-    if (normalizedRaw.includes(normalizedQuote)) {
-      return cleanQuote;
+    const pieces = flat(cleanQuote)
+      .split('...')
+      .map(p => p.trim().replace(/^["']+|["']+$/g, ''))
+      .filter(p => p.length > 0);
+
+    if (pieces.length === 0) return '';
+
+    const hay = flat(rawText);
+    let at = 0;
+    for (const piece of pieces) {
+      const idx = hay.indexOf(piece, at);
+      if (idx === -1) {
+        return ''; // Discard: piece does not appear in raw text
+      }
+      at = idx + piece.length;
     }
 
-    // Drop hallucinated or paraphrased quotes
-    return '';
+    return cleanQuote;
   }
 
   normalizeText(text) {
