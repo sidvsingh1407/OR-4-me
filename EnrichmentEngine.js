@@ -153,14 +153,14 @@ class EnrichmentEngine {
         // Batch Insert Leads
         if (successfullyEnriched.length > 0) {
            const leadsToInsert = successfullyEnriched.map(item => item.data);
-           this.db.batchInsert('Leads', leadsToInsert);
+           const insertedIds = this.db.batchInsert('Leads', leadsToInsert);
 
-           // Enqueue for Scoring
-           const scoreTasks = successfullyEnriched.map(item => ({
-              taskType: 'SCORE_LEAD',
-              payload: { leadId: item.data._id || item.data.id }
+           // Enqueue for Contact Enrichment (Pass 1 Web + Pass 2 Apollo), which then chains to SCORE_LEAD
+           const contactTasks = insertedIds.map(leadId => ({
+              taskType: 'ENRICH_CONTACT',
+              payload: { leadId }
            }));
-           this.queueManager.enqueueBatch(scoreTasks);
+           this.queueManager.enqueueBatch(contactTasks);
 
 
            // Update successfully processed RawLeads
@@ -223,7 +223,11 @@ class EnrichmentEngine {
       ],
       "aiMaturityIndicators": ["string"],
       "riskIndicators": ["string"],
-      "buyingSignals": ["string"]
+      "buyingSignals": ["string"],
+      "verbatimPainQuote": "string (EXACT verbatim quote from Raw Text describing an active bottleneck, pain, frustration, or risk. Must be a 100% verbatim substring of Raw Text. Leave empty string if none found.)",
+      "buyerDreamQuote": "string (EXACT verbatim quote from Raw Text describing desired future state, positive vision, or goal. Must be a 100% verbatim substring of Raw Text. Leave empty string if none found.)",
+      "buyerObjectionQuote": "string (EXACT verbatim quote from Raw Text describing skepticism, blocker, constraint, or hurdle. Must be a 100% verbatim substring of Raw Text. Leave empty string if none found.)",
+      "icpFitReason": "string (One sentence explaining why this prospect fits the Ideal Customer Profile based strictly on their verbatim quote. Leave empty string if none found.)"
     }
 
     Raw Text:
@@ -254,6 +258,27 @@ class EnrichmentEngine {
              throw new Error(`Failed to parse AI output as JSON: ${e.message}`);
         }
     }, { maxRetries: 3, baseDelayMs: 2000, context: 'AI_ENRICH_LEAD' });
+  }
+
+  /**
+   * Deterministic verbatim quote validation gate.
+   * Discards any quote not appearing verbatim in the raw source text.
+   */
+  validateVerbatimQuote(rawText, quote) {
+    if (!quote || typeof quote !== 'string') return '';
+    const cleanQuote = quote.trim();
+    if (cleanQuote.length < 5) return '';
+
+    const norm = (s) => s.toLowerCase().replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim();
+    const normalizedRaw = norm(rawText);
+    const normalizedQuote = norm(cleanQuote);
+
+    if (normalizedRaw.includes(normalizedQuote)) {
+      return cleanQuote;
+    }
+
+    // Drop hallucinated or paraphrased quotes
+    return '';
   }
 
   normalizeText(text) {
@@ -287,6 +312,13 @@ class EnrichmentEngine {
 
      const confidenceScore = this.confidenceCalculator.calculate(aiData);
      const qualityScore = this.qualityExtractor.calculate(aiData);
+
+     const fullRawText = [rawLead.title, rawLead.description, rawLead.body].filter(Boolean).join(' ');
+     const verifiedPainQuote = this.validateVerbatimQuote(fullRawText, aiData.verbatimPainQuote);
+     const verifiedDreamQuote = this.validateVerbatimQuote(fullRawText, aiData.buyerDreamQuote);
+     const verifiedObjectionQuote = this.validateVerbatimQuote(fullRawText, aiData.buyerObjectionQuote);
+     const verifiedUrl = verifiedPainQuote ? (rawLead.url || '') : '';
+     const icpFitReason = (verifiedPainQuote || verifiedDreamQuote) ? (aiData.icpFitReason || '') : '';
 
      return {
         company: finalCompanyName,
@@ -322,7 +354,12 @@ class EnrichmentEngine {
         overallQualityScore: Math.round((confidenceScore + qualityScore) / 2),
         originalSource: rawLead.source || 'Unknown',
         originalUrl: rawLead.url || '',
-        crawlTimestamp: rawLead.crawlTimestamp || new Date().toISOString()
+        crawlTimestamp: rawLead.crawlTimestamp || new Date().toISOString(),
+        verbatimPainQuote: verifiedPainQuote,
+        verbatimPainUrl: verifiedUrl,
+        buyerDreamQuote: verifiedDreamQuote,
+        buyerObjectionQuote: verifiedObjectionQuote,
+        icpFitReason: icpFitReason
      };
   }
 }

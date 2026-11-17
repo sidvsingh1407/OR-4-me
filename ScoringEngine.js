@@ -125,6 +125,24 @@ class PainScorer extends BaseScorer {
       }
     }
 
+    // 3. Ground-truth verbatim quotes and ICP fit (profile-builder)
+    if (lead.verbatimPainQuote && typeof lead.verbatimPainQuote === 'string' && lead.verbatimPainQuote.length > 5) {
+      score += 20;
+      signals.push('Verified Verbatim Pain');
+      detected.push('Verbatim Pain Quote');
+      reasoning.push(`Verified customer pain quote: "${lead.verbatimPainQuote.substring(0, 60)}..."`);
+    }
+
+    if (lead.buyerDreamQuote && typeof lead.buyerDreamQuote === 'string' && lead.buyerDreamQuote.length > 5) {
+      score += 10;
+      signals.push('Verified Buyer Dream');
+      detected.push('Buyer Dream Quote');
+    }
+
+    if (lead.icpFitReason && typeof lead.icpFitReason === 'string' && lead.icpFitReason.length > 5) {
+      reasoning.push(`ICP Fit: ${lead.icpFitReason}`);
+    }
+
     if (score > 0) {
       reasoning.push(`Identified ${matchedTerms.size} distinct AI pain indicators.`);
     }

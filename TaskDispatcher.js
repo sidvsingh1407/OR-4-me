@@ -100,6 +100,9 @@ function getTaskDispatcher() {
     if (typeof registerEnrichmentEngine === 'function') {
        registerEnrichmentEngine();
     }
+    if (typeof registerContactEnrichmentEngine === 'function') {
+       registerContactEnrichmentEngine();
+    }
     if (typeof registerDashboardEngine === 'function') {
        registerDashboardEngine();
     }

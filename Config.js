@@ -152,6 +152,10 @@ function getAppConfig() {
 
       // Enrichment Defaults
       'ENRICHMENT.BATCH_SIZE': 5,
+      'ENRICHMENT.APOLLO_API_KEY': '',
+      'ENRICHMENT.CONTACT_PAGES_LIMIT': 3,
+      'ENRICHMENT.ENABLE_APOLLO': true,
+      'ENRICHMENT.ENABLE_WEB_SCRAPE': true,
       // Crawler Defaults
       'CRAWLER.BATCH_SIZE': 50,
       'CRAWLER.MAX_PAGES': 10,

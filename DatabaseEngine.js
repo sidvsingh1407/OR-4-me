@@ -88,7 +88,17 @@ const SCHEMA = {
     expectedBusinessOutcome: { type: 'string' },
     salesBrief: { type: 'string' },
     opportunityCategory: { type: 'string' },
-    estimatedPriority: { type: 'string' }
+    estimatedPriority: { type: 'string' },
+    // Contact Enrichment & Verbatim Profiling columns
+    executiveEmail: { type: 'string' },
+    emailConfidence: { type: 'string' },
+    emailSource: { type: 'string' },
+    emailVerificationStatus: { type: 'string' },
+    verbatimPainQuote: { type: 'string' },
+    verbatimPainUrl: { type: 'string' },
+    buyerDreamQuote: { type: 'string' },
+    buyerObjectionQuote: { type: 'string' },
+    icpFitReason: { type: 'string' }
   },
   RawLeads: {
     rawLeadId: { type: 'string', required: true },
