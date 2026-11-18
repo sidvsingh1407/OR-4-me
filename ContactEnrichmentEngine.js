@@ -388,8 +388,8 @@ class ContactEnrichmentEngine {
       .replace(/&nbsp;/gi, ' ')
       .replace(/&#64;/gi, '@')
       .replace(/&#46;/gi, '.')
-      .replace(/\[\s*at\s*\]|\(\s*at\s*\)|\s+at\s+/gi, '@')
-      .replace(/\[\s*dot\s*\]|\(\s*dot\s*\)|\s+dot\s+/gi, '.');
+      .replace(/\s*(\[\s*at\s*\]|\(\s*at\s*\)|\bat\b)\s*/gi, '@')
+      .replace(/\s*(\[\s*dot\s*\]|\(\s*dot\s*\)|\bdot\b)\s*/gi, '.');
   }
 
   _isJunkEmail(email) {
